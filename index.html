@@ -4,17 +4,43 @@
     <meta charset="UTF-8">
     <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
 </head>
-<body style="background: #222; color: white; font-family: sans-serif; padding: 20px;">
+<body style="background: #222; color: white; font-family: sans-serif; padding: 20px; text-align: center;">
     <h3>Test Extension</h3>
-    <button id="pingBtn" style="padding: 10px; cursor: pointer;">Send Room Ping</button>
-    <p id="status">Connecting...</p>
+    
+    <button id="pingBtn" style="padding: 10px; width: 100%; margin-bottom: 10px; cursor: pointer;">
+        Send Room Ping
+    </button>
+
+    <button id="spawnBtn" style="padding: 10px; width: 100%; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px;">
+        Spawn Test Token
+    </button>
+
+    <p id="status" style="font-size: 0.8em; color: #888;">Connecting...</p>
+
     <script>
         const OBR = window.OBR;
+
         OBR.onReady(() => {
-            document.getElementById('status').innerText = "Connected!";
+            document.getElementById('status').innerText = "Connected to Map!";
+
+            // Button 1: The Ping
             document.getElementById('pingBtn').onclick = async () => {
                 const name = await OBR.player.getName();
                 OBR.notification.show(`${name} says Hello!`);
+            };
+
+            // Button 2: Spawn a Token
+            document.getElementById('spawnBtn').onclick = async () => {
+                const item = OBR.gameObject
+                    .buildItem()
+                    .type("IMAGE")
+                    .image("https://www.owlbear.rodeo/tokens/unknown.png") // A default mystery token
+                    .name("Test Token")
+                    .position({ x: 0, y: 0 })
+                    .build();
+
+                await OBR.scene.items.addItems([item]);
+                OBR.notification.show("Token Spawned at 0,0!");
             };
         });
     </script>

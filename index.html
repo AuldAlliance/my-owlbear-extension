@@ -32,58 +32,64 @@
     <p id="status" style="font-size: 11px; color: #888;">Select a token to start</p>
 
     <script>
-        const OBR = window.OBR;
-        const ID = "com.auldalliance.stats-extension"; // Your unique ID
+    const OBR = window.OBR;
+    const ID = "com.auldalliance.stats-extension";
 
-        OBR.onReady(() => {
-            // --- ACTION: SHOW STATS ---
-            document.getElementById('showStatsBtn').onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                if (!selection || selection.length === 0) {
-                    OBR.notification.show("Please select a token first.");
-                    return;
-                }
+    OBR.onReady(() => {
+        const statusElement = document.getElementById('status');
 
-                // Get the items currently selected
-                const items = await OBR.scene.items.getItems(selection);
-                const target = items[0]; // Take the first selected item
-                
-                // Look for the URL in the metadata
-                const url = target.metadata[ID + "/statsUrl"];
-                
-                if (url) {
-                    window.open(url, '_blank'); // Opens the URL in a new tab
-                } else {
-                    OBR.notification.show("No Stats URL found on this token.");
-                }
-            };
+        // --- ACTION: SHOW STATS (MODAL VERSION) ---
+        document.getElementById('showStatsBtn').onclick = async () => {
+            const selection = await OBR.player.getSelection();
+            
+            if (!selection || selection.length === 0) {
+                OBR.notification.show("Please select a token first.");
+                return;
+            }
 
-            // --- ACTION: SAVE URL ---
-            document.getElementById('saveUrlBtn').onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                const urlValue = document.getElementById('urlInput').value;
-
-                if (!selection || selection.length === 0) {
-                    OBR.notification.show("Select a token to save the URL to.");
-                    return;
-                }
-
-                if (!urlValue.startsWith('http')) {
-                    OBR.notification.show("Please enter a valid URL starting with http");
-                    return;
-                }
-
-                // Update the metadata of the selected tokens
-                await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) {
-                        item.metadata[ID + "/statsUrl"] = urlValue;
-                    }
+            const items = await OBR.scene.items.getItems(selection);
+            const target = items[0];
+            const url = target.metadata[ID + "/statsUrl"];
+            
+            if (url) {
+                // This opens a window INSIDE Owlbear Rodeo
+                OBR.modal.open({
+                    id: ID + "/modal",
+                    url: url,
+                    width: 600,
+                    height: 800,
                 });
+            } else {
+                OBR.notification.show("No Stats URL found on this token.");
+            }
+        };
 
-                OBR.notification.show("URL Saved to Token!");
-                document.getElementById('urlInput').value = ""; // Clear input
-            };
-        });
-    </script>
+        // --- ACTION: SAVE URL ---
+        document.getElementById('saveUrlBtn').onclick = async () => {
+            const selection = await OBR.player.getSelection();
+            const urlValue = document.getElementById('urlInput').value.trim();
+
+            if (!selection || selection.length === 0) {
+                OBR.notification.show("Select a token to save the URL to.");
+                return;
+            }
+
+            if (!urlValue.startsWith('http')) {
+                OBR.notification.show("Invalid URL. Must start with http/https");
+                return;
+            }
+
+            await OBR.scene.items.updateItems(selection, (items) => {
+                for (let item of items) {
+                    item.metadata[ID + "/statsUrl"] = urlValue;
+                }
+            });
+
+            OBR.notification.show("URL Saved to Token!");
+            statusElement.innerText = "URL saved to " + selection.length + " token(s).";
+            document.getElementById('urlInput').value = ""; 
+        };
+    });
+</script>
 </body>
 </html>

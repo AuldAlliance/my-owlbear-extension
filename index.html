@@ -3,44 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
+    <style>
+        body { background: #222; color: white; font-family: sans-serif; padding: 15px; }
+        button { 
+            width: 100%; padding: 10px; margin-top: 10px; cursor: pointer;
+            background: #3d5afe; color: white; border: none; border-radius: 4px;
+        }
+        button:disabled { background: #555; cursor: not-allowed; }
+        input { 
+            width: 100%; padding: 8px; box-sizing: border-box; 
+            background: #333; color: white; border: 1px solid #555; border-radius: 4px;
+        }
+        .section { margin-bottom: 20px; border-bottom: 1px solid #444; pb: 10px; }
+        label { font-size: 12px; color: #aaa; }
+    </style>
 </head>
-<body style="background: #222; color: white; font-family: sans-serif; padding: 20px; text-align: center;">
-    <h3>Test Extension</h3>
-    
-    <button id="pingBtn" style="padding: 10px; width: 100%; margin-bottom: 10px; cursor: pointer;">
-        Send Room Ping
-    </button>
+<body>
+    <div class="section">
+        <button id="showStatsBtn">Show Stats</button>
+    </div>
 
-    <button id="spawnBtn" style="padding: 10px; width: 100%; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px;">
-        Spawn Test Token
-    </button>
+    <div class="section">
+        <label>Set Stats URL for Selected Token:</label>
+        <input type="text" id="urlInput" placeholder="https://dndbeyond.com/...">
+        <button id="saveUrlBtn" style="background: #4caf50;">Save URL to Token</button>
+    </div>
 
-    <p id="status" style="font-size: 0.8em; color: #888;">Connecting...</p>
+    <p id="status" style="font-size: 11px; color: #888;">Select a token to start</p>
 
     <script>
         const OBR = window.OBR;
+        const ID = "com.auldalliance.stats-extension"; // Your unique ID
 
         OBR.onReady(() => {
-            document.getElementById('status').innerText = "Connected to Map!";
+            // --- ACTION: SHOW STATS ---
+            document.getElementById('showStatsBtn').onclick = async () => {
+                const selection = await OBR.player.getSelection();
+                if (!selection || selection.length === 0) {
+                    OBR.notification.show("Please select a token first.");
+                    return;
+                }
 
-            // Button 1: The Ping
-            document.getElementById('pingBtn').onclick = async () => {
-                const name = await OBR.player.getName();
-                OBR.notification.show(`${name} says Hello!`);
+                // Get the items currently selected
+                const items = await OBR.scene.items.getItems(selection);
+                const target = items[0]; // Take the first selected item
+                
+                // Look for the URL in the metadata
+                const url = target.metadata[ID + "/statsUrl"];
+                
+                if (url) {
+                    window.open(url, '_blank'); // Opens the URL in a new tab
+                } else {
+                    OBR.notification.show("No Stats URL found on this token.");
+                }
             };
 
-            // Button 2: Spawn a Token
-            document.getElementById('spawnBtn').onclick = async () => {
-                const item = OBR.gameObject
-                    .buildItem()
-                    .type("IMAGE")
-                    .image("https://www.owlbear.rodeo/tokens/unknown.png") // A default mystery token
-                    .name("Test Token")
-                    .position({ x: 0, y: 0 })
-                    .build();
+            // --- ACTION: SAVE URL ---
+            document.getElementById('saveUrlBtn').onclick = async () => {
+                const selection = await OBR.player.getSelection();
+                const urlValue = document.getElementById('urlInput').value;
 
-                await OBR.scene.items.addItems([item]);
-                OBR.notification.show("Token Spawned at 0,0!");
+                if (!selection || selection.length === 0) {
+                    OBR.notification.show("Select a token to save the URL to.");
+                    return;
+                }
+
+                if (!urlValue.startsWith('http')) {
+                    OBR.notification.show("Please enter a valid URL starting with http");
+                    return;
+                }
+
+                // Update the metadata of the selected tokens
+                await OBR.scene.items.updateItems(selection, (items) => {
+                    for (let item of items) {
+                        item.metadata[ID + "/statsUrl"] = urlValue;
+                    }
+                });
+
+                OBR.notification.show("URL Saved to Token!");
+                document.getElementById('urlInput').value = ""; // Clear input
             };
         });
     </script>

@@ -1,12 +1,12 @@
 {
-  "name": "My Simple Test Extension",
-  "version": "1.0.0",
+  "name": "Token Stats Linker",
+  "version": "1.1.0",
   "manifest_version": 1,
   "action": {
-    "title": "Ping Test",
+    "title": "Token Stats",
     "icon": "icon.svg",
     "popover": "index.html",
     "width": 300,
-    "height": 200
+    "height": 350
   }
 }

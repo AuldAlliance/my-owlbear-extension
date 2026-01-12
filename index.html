@@ -2,26 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Owlbear Test</title>
     <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
 </head>
 <body style="background: #222; color: white; font-family: sans-serif; padding: 20px;">
     <h3>Test Extension</h3>
     <button id="pingBtn" style="padding: 10px; cursor: pointer;">Send Room Ping</button>
-    <p id="status">Waiting for SDK...</p>
-
+    <p id="status">Connecting...</p>
     <script>
         const OBR = window.OBR;
-
-        // Initialize when the SDK is ready
         OBR.onReady(() => {
-            document.getElementById('status').innerText = "Connected to Owlbear!";
-            
+            document.getElementById('status').innerText = "Connected!";
             document.getElementById('pingBtn').onclick = async () => {
-                const playerName = await OBR.player.getName();
-                
-                // Send a notification to everyone in the room
-                OBR.notification.show(`${playerName} says: Hello from the extension!`);
+                const name = await OBR.player.getName();
+                OBR.notification.show(`${name} says Hello!`);
             };
         });
     </script>

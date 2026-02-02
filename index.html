@@ -1,127 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
-    <style>
-        :root { --primary: #3d5afe; --success: #4caf50; --danger: #ff5252; --bg: #222; }
-        body { background: var(--bg); color: white; font-family: system-ui, sans-serif; padding: 15px; margin: 0; }
-        .container { display: flex; flex-direction: column; gap: 12px; }
-        button { 
-            width: 100%; padding: 10px; cursor: pointer; border: none; 
-            border-radius: 6px; font-weight: bold; color: white; transition: opacity 0.2s;
+const ID = "com.auldalliance.token-linker"; // Unified ID
+const OBR = window.OBR;
+
+// 1. Check if the SDK actually loaded
+if (!OBR) {
+    console.error("OBR SDK failed to load from the CDN!");
+    document.getElementById('status').innerText = "Error: SDK Not Found";
+}
+
+OBR.onReady(async () => {
+    console.log("OBR is Ready and Connected!");
+    const status = document.getElementById('status');
+    const showBtn = document.getElementById('showStatsBtn');
+    const input = document.getElementById('urlInput');
+
+    status.innerText = "Connected: Select a token";
+
+    // 2. Handle Selection Changes
+    OBR.player.onChange(async (player) => {
+        console.log("Selection changed:", player.selection);
+        
+        if (player.selection && player.selection.length > 0) {
+            const items = await OBR.scene.items.getItems(player.selection);
+            const token = items[0];
+            
+            // Check if it's actually a character/token, not a drawing
+            if (token) {
+                const savedUrl = token.metadata[`${ID}/statsUrl`];
+                input.value = savedUrl || "";
+                showBtn.disabled = !savedUrl;
+                status.innerText = `Selected: ${token.name}`;
+            }
+        } else {
+            status.innerText = "Nothing selected";
+            showBtn.disabled = true;
+            input.value = "";
         }
-        button:hover { opacity: 0.9; }
-        button:disabled { background: #555 !important; cursor: not-allowed; }
-        input { 
-            width: 100%; padding: 10px; box-sizing: border-box; 
-            background: #333; color: white; border: 1px solid #555; border-radius: 6px;
-        }
-        .label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
-        .status-bar { font-size: 12px; color: #888; text-align: center; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }
-        #showStatsBtn { background: var(--primary); height: 50px; font-size: 16px; }
-        #saveUrlBtn { background: var(--success); }
-        #clearBtn { background: transparent; border: 1px solid #555; color: #aaa; font-size: 11px; padding: 5px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="section">
-            <button id="showStatsBtn" disabled>View Stats</button>
-        </div>
+    });
 
-        <div class="section">
-            <p class="label">Character URL (D&D Beyond, etc.)</p>
-            <input type="text" id="urlInput" placeholder="Paste link here...">
-            <div style="display: flex; gap: 5px; margin-top: 8px;">
-                <button id="saveUrlBtn">Save to Token</button>
-                <button id="clearBtn">Clear</button>
-            </div>
-        </div>
+    // 3. Save Logic
+    document.getElementById('saveUrlBtn').onclick = async () => {
+        const selection = await OBR.player.getSelection();
+        if (selection.length === 0) return OBR.notification.show("Select a token first!");
 
-        <div id="status" class="status-bar">Select a token on the map</div>
-    </div>
-
-    <script>
-        const ID = "com.auldalliance.stats-linker";
-        const OBR = window.OBR;
-
-        OBR.onReady(async () => {
-            const showBtn = document.getElementById('showStatsBtn');
-            const saveBtn = document.getElementById('saveUrlBtn');
-            const clearBtn = document.getElementById('clearBtn');
-            const input = document.getElementById('urlInput');
-            const status = document.getElementById('status');
-
-            // --- FUNCTION: Update UI based on Selection ---
-            const updateUI = async (selection) => {
-                if (selection && selection.length > 0) {
-                    const items = await OBR.scene.items.getItems(selection);
-                    const token = items[0];
-                    const existingUrl = token.metadata[`${ID}/statsUrl`];
-                    
-                    input.value = existingUrl || "";
-                    showBtn.disabled = !existingUrl;
-                    status.innerText = `Target: ${token.name || "Unknown Token"}`;
-                } else {
-                    input.value = "";
-                    showBtn.disabled = true;
-                    status.innerText = "Select a token to start";
-                }
-            };
-
-            // Listen for selection changes in real-time
-            OBR.player.onChange((player) => {
-                updateUI(player.selection);
-            });
-
-            // --- ACTION: Show Stats ---
-            showBtn.onclick = async () => {
-                const url = input.value.trim();
-                if (!url) return;
-
-                // D&D Beyond/Google usually block iframes, so we open a new tab
-                if (url.includes("dndbeyond.com") || url.includes("google.com")) {
-                    window.open(url, '_blank');
-                    OBR.notification.show("Opening in new tab...");
-                } else {
-                    OBR.modal.open({
-                        id: `${ID}/modal`,
-                        url: url,
-                        width: 900,
-                        height: 700
-                    });
-                }
-            };
-
-            // --- ACTION: Save URL ---
-            saveBtn.onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                if (!selection.length) return OBR.notification.show("No token selected!");
-
-                await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/statsUrl`] = input.value.trim();
-                    }
-                });
-                OBR.notification.show("✅ Link Saved");
-                showBtn.disabled = !input.value.trim();
-            };
-
-            // --- ACTION: Clear ---
-            clearBtn.onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) {
-                        delete item.metadata[`${ID}/statsUrl`];
-                    }
-                });
-                input.value = "";
-                showBtn.disabled = true;
-                OBR.notification.show("Metadata Cleared");
-            };
+        await OBR.scene.items.updateItems(selection, (items) => {
+            for (let item of items) {
+                item.metadata[`${ID}/statsUrl`] = input.value.trim();
+            }
         });
-    </script>
-</body>
-</html>
+        
+        OBR.notification.show("URL Saved to Token");
+        showBtn.disabled = !input.value.trim();
+    };
+
+    // 4. Show Logic
+    showBtn.onclick = () => {
+        const url = input.value.trim();
+        if (url) window.open(url, '_blank');
+    };
+});

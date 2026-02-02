@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@1.0.18/dist/obr-sdk.js" crossorigin="anonymous"></script>
+    <title>Token Stats Linker</title>
+    <script src="https://unpkg.com/@owlbear-rodeo/sdk@1.0.18/dist/obr-sdk.js"></script>
     <style>
         body { background: #242424; color: white; font-family: sans-serif; padding: 16px; margin: 0; }
         .wrapper { display: flex; flex-direction: column; gap: 10px; }
@@ -19,60 +20,36 @@
         <button id="showStatsBtn" disabled>VIEW STATS</button>
         <input type="text" id="urlInput" placeholder="Paste URL here...">
         <button id="saveBtn">SAVE TO TOKEN</button>
-        <div id="status">Checking connection...</div>
+        <div id="status">Waiting for Owlbear...</div>
     </div>
 
     <script>
+        // Use the global OBR object provided by the script tag in the head
+        const OBR_SDK = window.OBR;
         const ID = "com.auldalliance.stats-linker";
-        
-        // This check runs immediately
-        if (typeof OBR === 'undefined') {
-            document.getElementById('status').innerText = "SDK BLOCKED BY BROWSER";
+
+        // Logic check: if the SDK didn't load, tell the user immediately
+        if (!OBR_SDK) {
+            document.getElementById('status').innerText = "SDK NOT FOUND";
             document.getElementById('status').style.color = "red";
-        }
+        } else {
+            // Wait for Owlbear Rodeo to signal it's ready
+            OBR_SDK.onReady(async () => {
+                const status = document.getElementById('status');
+                const showBtn = document.getElementById('showStatsBtn');
+                const saveBtn = document.getElementById('saveBtn');
+                const input = document.getElementById('urlInput');
 
-        OBR.onReady(async () => {
-            const status = document.getElementById('status');
-            const showBtn = document.getElementById('showStatsBtn');
-            const input = document.getElementById('urlInput');
+                status.innerText = "CONNECTED! Select a token.";
+                status.style.color = "lime";
 
-            status.innerText = "CONNECTED! Select a token.";
-            status.style.color = "lime";
-
-            OBR.player.onChange(async (player) => {
-                if (player.selection && player.selection.length > 0) {
-                    const items = await OBR.scene.items.getItems(player.selection);
-                    const token = items[0];
-                    if (token) {
-                        const url = token.metadata[`${ID}/url`];
-                        input.value = url || "";
-                        showBtn.disabled = !url;
-                        status.innerText = `Token: ${token.name || "Selected"}`;
-                    }
-                } else {
-                    status.innerText = "Select a token";
-                    showBtn.disabled = true;
-                    input.value = "";
-                }
-            });
-
-            document.getElementById('saveBtn').onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                if (!selection.length) return OBR.notification.show("Select a token!");
-                
-                await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/url`] = input.value.trim();
-                    }
-                });
-                OBR.notification.show("Saved!");
-                showBtn.disabled = !input.value.trim();
-            };
-
-            showBtn.onclick = () => {
-                if (input.value) window.open(input.value.trim(), '_blank');
-            };
-        });
-    </script>
-</body>
-</html>
+                // Watch for when the user clicks a token on the map
+                OBR_SDK.player.onChange(async (player) => {
+                    const selection = player.selection;
+                    if (selection && selection.length > 0) {
+                        const items = await OBR_SDK.scene.items.getItems(selection);
+                        const token = items[0];
+                        if (token) {
+                            const savedUrl = token.metadata[`${ID}/url`];
+                            input.value = savedUrl || "";
+                            showBtn

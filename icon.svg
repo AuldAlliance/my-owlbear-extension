@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <circle cx="12" cy="12" r="10" fill="#3d5afe"/>
-  <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="12" font-family="Arial" dy=".3em">S</text>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <circle fill="#3d5afe" cx="12" cy="12" r="12"></circle>
+    <text font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#FFFFFF">
+        <tspan x="6" y="18">S</tspan>
+    </text>
 </svg>

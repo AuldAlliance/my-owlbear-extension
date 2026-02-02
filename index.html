@@ -76,13 +76,18 @@
                 showBtn.disabled = !input.value.trim();
             };
 
-            // Open URL logic
+            // 3. Open URL logic (Opens INSIDE Owlbear Rodeo)
             showBtn.onclick = () => {
                 const url = input.value.trim();
                 if (url) {
-                    // Ensure URL has protocol or it might try to open relative to GitHub
                     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                    window.open(fullUrl, '_blank');
+                    
+                    OBR.modal.open({
+                        id: `${ID}/view-stats`,
+                        url: fullUrl,
+                        height: 600,
+                        width: 800,
+                    });
                 }
             };
         });

@@ -7,27 +7,30 @@
     <style>
         body { background: #242424; color: white; font-family: sans-serif; padding: 16px; margin: 0; overflow: hidden; }
         .wrapper { display: flex; flex-direction: column; gap: 10px; }
-        button { width: 100%; padding: 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #3d5afe; }
+        button { width: 100%; padding: 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #3d5afe; transition: background 0.2s; }
+        button:hover:not(:disabled) { background: #536dfe; }
         button:disabled { background: #444; color: #888; cursor: not-allowed; }
         #saveBtn { background: #4caf50; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; }
+        #saveBtn:hover { background: #66bb6a; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
+        input:focus { border-color: #3d5afe; }
         #status { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }
     </style>
 </head>
 <body>
     <div class="wrapper">
-        <button id="showStatsBtn" disabled>VIEW STATS</button>
-        <input type="text" id="urlInput" placeholder="Paste URL here...">
+        <button id="showStatsBtn" disabled>VIEW STATS IN RODEO</button>
+        <input type="text" id="urlInput" placeholder="Paste Stat URL here...">
         <button id="saveBtn">SAVE TO TOKEN</button>
         <div id="status">Waiting for Owlbear...</div>
     </div>
 
     <script type="module">
+        // Import the SDK as an ES Module
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
 
         const ID = "com.auldalliance.stats-linker";
 
-        // Everything must happen inside onReady
         OBR.onReady(async () => {
             const status = document.getElementById('status');
             const showBtn = document.getElementById('showStatsBtn');
@@ -37,19 +40,18 @@
             status.innerText = "CONNECTED! Select a token.";
             status.style.color = "lime";
 
-            // Watch for selection changes
+            // 1. WATCH SELECTION: Auto-load the URL when you click a token
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
                 if (selection && selection.length > 0) {
                     const items = await OBR.scene.items.getItems(selection);
-                    const token = items[0]; // Take the first selected item
+                    const token = items[0];
                     
                     if (token) {
-                        // Metadata is stored in a namespaced object
                         const savedUrl = token.metadata[`${ID}/url`];
                         input.value = savedUrl || "";
                         showBtn.disabled = !savedUrl;
-                        status.innerText = `Token: ${token.name || "Selected"}`;
+                        status.innerText = `Editing: ${token.name || "Token"}`;
                     }
                 } else {
                     status.innerText = "Select a token";
@@ -58,7 +60,7 @@
                 }
             });
 
-            // Save logic
+            // 2. SAVE LOGIC: Store the URL in the token's metadata
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
                 if (!selection || !selection.length) {
@@ -72,17 +74,23 @@
                     }
                 });
                 
-                OBR.notification.show("URL Saved to Metadata");
+                OBR.notification.show("Link Saved!");
                 showBtn.disabled = !input.value.trim();
             };
 
-            // Open URL logic
+            // 3. SHOW LOGIC: Open within Owlbear using a Modal
             showBtn.onclick = () => {
                 const url = input.value.trim();
                 if (url) {
-                    // Ensure URL has protocol or it might try to open relative to GitHub
+                    // Ensure the URL has a protocol
                     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                    window.open(fullUrl, '_blank');
+                    
+                    OBR.modal.open({
+                        id: `${ID}/modal`,
+                        url: fullUrl,
+                        height: 600,
+                        width: 800,
+                    });
                 }
             };
         });

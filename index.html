@@ -1,29 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Stats Linker</title>
     <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
+    <style>
+        :root {
+            --bg-color: #242424;
+            --text-color: #ffffff;
+            --primary-blue: #3d5afe;
+            --success-green: #4caf50;
+            --border-color: #444;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 16px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .status-badge {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+        #connection-status {
+            color: #ff9800; /* Orange while connecting */
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #333;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: white;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:disabled {
+            background: #444 !important;
+            color: #888;
+            cursor: not-allowed;
+        }
+        #showStatsBtn { background-color: var(--primary-blue); color: white; }
+        #saveBtn { background-color: var(--success-green); color: white; margin-top: 8px; }
+        
+        .hint { font-size: 11px; color: #888; margin-top: 4px; }
+    </style>
 </head>
-<body style="background: #222; color: white; font-family: sans-serif;">
-    <div id="status">Connecting to Owlbear...</div>
-    <button id="debugBtn" style="margin-top:20px;">Check Connection Status</button>
+<body>
+
+    <div>
+        <div class="status-badge">System Status</div>
+        <div id="connection-status">Initializing SDK...</div>
+    </div>
+
+    <hr style="width:100%; border:0; border-top:1px solid #444; margin: 8px 0;">
+
+    <button id="showStatsBtn" disabled>VIEW STATS</button>
+    
+    <div>
+        <div class="status-badge">Target URL</div>
+        <input type="text" id="urlInput" placeholder="https://dndbeyond.com/characters/...">
+        <button id="saveBtn">SAVE TO TOKEN</button>
+        <div class="hint">Select a token on the map to link a URL.</div>
+    </div>
 
     <script>
-        const debugBtn = document.getElementById('debugBtn');
-        const status = document.getElementById('status');
+        // Use a unique ID to avoid clashing with other extensions
+        const ID = "com.auldalliance.stats-linker";
+        const statusText = document.getElementById('connection-status');
+        const showBtn = document.getElementById('showStatsBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const urlInput = document.getElementById('urlInput');
 
-        // Manual check to see if the SDK even loaded
-        debugBtn.onclick = () => {
-            if (typeof OBR === 'undefined') {
-                alert("SDK Missing: The script tag failed to load.");
-            } else {
-                alert("SDK Found! But OBR.onReady hasn't fired yet. Check if you are the GM and a Scene is open.");
-            }
-        };
+        // Check if OBR is available
+        if (typeof OBR === 'undefined') {
+            statusText.innerText = "SDK ERROR: Script blocked";
+            statusText.style.color = "red";
+        }
 
-        // The Official Handshake
-        OBR.onReady(() => {
-            status.innerText = "CONNECTED!";
-            status.style.color = "#4caf50";
+        // The Official OBR Handshake
+        OBR.onReady(async () => {
+            statusText.innerText = "CONNECTED";
+            statusText.style.color = "#4caf50";
+
+            // Listen for selection changes (Official pattern)
+            OBR.player.onChange(async (player) => {
+                const selection = player.selection;
+                if (selection && selection.length > 0) {
+                    const items = await OBR.scene.items.getItems(selection);
+                    const token = items[0];
+                    if (token) {
+                        const savedUrl = token.metadata[`${ID}/url`];
+                        urlInput.value = savedUrl || "";
+                        showBtn.disabled = !savedUrl;
+                        statusText.innerText = `READY: ${token.name || "Token"}`;
+                    }
+                } else {
+                    urlInput.value = "";
+                    showBtn.disabled = true;
+                    statusText.innerText = "CONNECTED: Select a token";
+                }
+            });
+
+            // Save Metadata to Token
+            saveBtn.onclick = async () => {
+                const selection = await OBR.player.getSelection();
+                if (!selection || selection.length === 0) {
+                    OBR.notification.show("Please select a token first!");
+                    return;
+                }
+
+                const urlToSave = urlInput.value.trim();
+                await OBR.scene.items.updateItems(selection, (items) => {
+                    for (let item of items) {
+                        item.metadata[`${ID}/url`] = urlToSave;
+                    }
+                });
+
+                OBR.notification.show(urlToSave ? "URL Saved!" : "URL Cleared");
+                showBtn.disabled = !urlToSave;
+            };
+
+            // Open the link
+            showBtn.onclick = () => {
+                const url = urlInput.value.trim();
+                if (url) {
+                    // D&D Beyond links must open in a new tab
+                    window.open(url, '_blank');
+                }
+            };
         });
     </script>
 </body>

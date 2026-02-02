@@ -2,26 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Token Linker</title>
     <script src="https://unpkg.com/@owlbear-rodeo/sdk"></script>
     <style>
-        body { background: #222; color: white; font-family: sans-serif; padding: 15px; }
-        button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; background: #3d5afe; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; margin-top: 5px; }
-        .label { font-size: 11px; color: #aaa; margin-top: 15px; display: block; }
-        #status { font-size: 12px; color: #888; margin-top: 15px; text-align: center; border-top: 1px solid #444; padding-top: 10px; }
+        body { background: #222; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
+        .wrapper { display: flex; flex-direction: column; gap: 10px; }
+        button { 
+            width: 100%; padding: 12px; cursor: pointer; border: none; 
+            border-radius: 4px; font-weight: bold; color: white;
+        }
+        #showStatsBtn { background: #3d5afe; font-size: 14px; }
+        #saveUrlBtn { background: #4caf50; }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; }
+        input { 
+            width: 100%; padding: 10px; box-sizing: border-box; 
+            background: #333; color: white; border: 1px solid #555; border-radius: 4px;
+        }
+        .label { font-size: 10px; color: #888; text-transform: uppercase; }
+        #status { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; }
     </style>
 </head>
 <body>
-    <button id="showStatsBtn" disabled>View Stats</button>
-
-    <span class="label">Character URL</span>
-    <input type="text" id="urlInput" placeholder="https://...">
-    <button id="saveUrlBtn" style="background: #4caf50;">Save to Token</button>
-    
-    <div id="status">Connecting to Owlbear...</div>
+    <div class="wrapper">
+        <button id="showStatsBtn" disabled>OPEN STATS</button>
+        
+        <span class="label">Character URL</span>
+        <input type="text" id="urlInput" placeholder="https://dndbeyond.com/...">
+        
+        <button id="saveUrlBtn">SAVE TO TOKEN</button>
+        
+        <div id="status">Connecting to Owlbear...</div>
+    </div>
 
     <script>
+        // All JavaScript MUST be between these script tags
         const ID = "com.auldalliance.token-linker";
         const OBR = window.OBR;
 
@@ -30,15 +44,15 @@
             const showBtn = document.getElementById('showStatsBtn');
             const input = document.getElementById('urlInput');
 
-            status.innerText = "Connected! Select a token.";
+            status.innerText = "Connected: Select a token";
 
-            // Update UI when selection changes
+            // Update UI when you click a token on the map
             OBR.player.onChange(async (player) => {
                 if (player.selection && player.selection.length > 0) {
                     const items = await OBR.scene.items.getItems(player.selection);
                     const token = items[0];
                     if (token) {
-                        const savedUrl = token.metadata[`${ID}/statsUrl`];
+                        const savedUrl = token.metadata[`${ID}/statsUrl` ];
                         input.value = savedUrl || "";
                         showBtn.disabled = !savedUrl;
                         status.innerText = `Selected: ${token.name || "Token"}`;
@@ -50,24 +64,29 @@
                 }
             });
 
-            // Save logic
+            // Save the URL to the token's metadata
             document.getElementById('saveUrlBtn').onclick = async () => {
                 const selection = await OBR.player.getSelection();
-                if (!selection.length) return OBR.notification.show("Select a token first!");
+                if (!selection || selection.length === 0) {
+                    OBR.notification.show("Select a token first!");
+                    return;
+                }
 
                 await OBR.scene.items.updateItems(selection, (items) => {
                     for (let item of items) {
-                        item.metadata[`${ID}/statsUrl`] = input.value.trim();
+                        item.metadata[`${ID}/statsUrl` ] = input.value.trim();
                     }
                 });
-                OBR.notification.show("✅ URL Saved");
+                OBR.notification.show("URL Saved!");
                 showBtn.disabled = !input.value.trim();
             };
 
-            // Show logic
+            // Open the URL in a new tab
             showBtn.onclick = () => {
                 const url = input.value.trim();
-                if (url) window.open(url, '_blank');
+                if (url) {
+                    window.open(url, '_blank');
+                }
             };
         });
     </script>

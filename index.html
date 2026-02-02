@@ -52,4 +52,42 @@
                         if (token) {
                             const savedUrl = token.metadata[`${ID}/url`];
                             input.value = savedUrl || "";
-                            showBtn
+                            showBtn.disabled = !savedUrl;
+                            status.innerText = `Token: ${token.name || "Selected"}`;
+                        }
+                    } else {
+                        status.innerText = "Select a token";
+                        showBtn.disabled = true;
+                        input.value = "";
+                    }
+                });
+
+                // Logic to save the URL into the token's metadata
+                saveBtn.onclick = async () => {
+                    const selection = await OBR_SDK.player.getSelection();
+                    if (!selection || !selection.length) {
+                        OBR_SDK.notification.show("Select a token first!");
+                        return;
+                    }
+                    
+                    await OBR_SDK.scene.items.updateItems(selection, (items) => {
+                        for (let item of items) {
+                            item.metadata[`${ID}/url`] = input.value.trim();
+                        }
+                    });
+                    OBR_SDK.notification.show("URL Saved!");
+                    showBtn.disabled = !input.value.trim();
+                };
+
+                // Logic to open the saved URL
+                showBtn.onclick = () => {
+                    const url = input.value.trim();
+                    if (url) {
+                        window.open(url, '_blank');
+                    }
+                };
+            });
+        }
+    </script>
+</body>
+</html>

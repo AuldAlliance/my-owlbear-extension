@@ -1,6 +1,6 @@
 {
   "name": "Token Stats Linker",
-  "version": "1.1.8",
+  "version": "1.2.1",
   "manifest_version": 1,
   "permissions": [
     "UPDATE"
@@ -8,7 +8,7 @@
   "action": {
     "title": "Token Stats",
     "icon": "https://auldalliance.github.io/my-owlbear-extension/icon.svg",
-    "src": "https://auldalliance.github.io/my-owlbear-extension/index.html",
+    "popover": "https://auldalliance.github.io/my-owlbear-extension/index.html",
     "width": 300,
     "height": 350,
     "location": "POPUP"

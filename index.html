@@ -1,100 +1,93 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats Linker</title>
+    <script src="https://unpkg.com/@owlbear-rodeo/sdk@1.0.18/dist/obr-sdk.js"></script>
     <style>
-        body { background: #242424; color: white; font-family: sans-serif; padding: 16px; margin: 0; overflow: hidden; }
+        body { background: #242424; color: white; font-family: sans-serif; padding: 16px; margin: 0; }
         .wrapper { display: flex; flex-direction: column; gap: 10px; }
-        button { width: 100%; padding: 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #3d5afe; transition: background 0.2s; }
-        button:hover:not(:disabled) { background: #536dfe; }
+        button { width: 100%; padding: 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #3d5afe; }
         button:disabled { background: #444; color: #888; cursor: not-allowed; }
         #saveBtn { background: #4caf50; }
-        #saveBtn:hover { background: #66bb6a; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
-        input:focus { border-color: #3d5afe; }
+        input { width: 100%; padding: 10px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; }
         #status { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }
     </style>
 </head>
 <body>
     <div class="wrapper">
-        <button id="showStatsBtn" disabled>VIEW STATS IN RODEO</button>
-        <input type="text" id="urlInput" placeholder="Paste Stat URL here...">
+        <button id="showStatsBtn" disabled>VIEW STATS</button>
+        <input type="text" id="urlInput" placeholder="Paste URL here...">
         <button id="saveBtn">SAVE TO TOKEN</button>
         <div id="status">Waiting for Owlbear...</div>
     </div>
 
-    <script type="module">
-        // Import the SDK as an ES Module
-        import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
-
+    <script>
+        // Use the global OBR object provided by the script tag in the head
+        const OBR_SDK = window.OBR;
         const ID = "com.auldalliance.stats-linker";
 
-        OBR.onReady(async () => {
-            const status = document.getElementById('status');
-            const showBtn = document.getElementById('showStatsBtn');
-            const saveBtn = document.getElementById('saveBtn');
-            const input = document.getElementById('urlInput');
+        // Logic check: if the SDK didn't load, tell the user immediately
+        if (!OBR_SDK) {
+            document.getElementById('status').innerText = "SDK NOT FOUND asshole";
+            document.getElementById('status').style.color = "red";
+        } else {
+            // Wait for Owlbear Rodeo to signal it's ready
+            OBR_SDK.onReady(async () => {
+                const status = document.getElementById('status');
+                const showBtn = document.getElementById('showStatsBtn');
+                const saveBtn = document.getElementById('saveBtn');
+                const input = document.getElementById('urlInput');
 
-            status.innerText = "CONNECTED! Select a token.";
-            status.style.color = "lime";
+                status.innerText = "CONNECTED! Select a token.";
+                status.style.color = "lime";
 
-            // 1. WATCH SELECTION: Auto-load the URL when you click a token
-            OBR.player.onChange(async (player) => {
-                const selection = player.selection;
-                if (selection && selection.length > 0) {
-                    const items = await OBR.scene.items.getItems(selection);
-                    const token = items[0];
-                    
-                    if (token) {
-                        const savedUrl = token.metadata[`${ID}/url`];
-                        input.value = savedUrl || "";
-                        showBtn.disabled = !savedUrl;
-                        status.innerText = `Editing: ${token.name || "Token"}`;
-                    }
-                } else {
-                    status.innerText = "Select a token";
-                    showBtn.disabled = true;
-                    input.value = "";
-                }
-            });
-
-            // 2. SAVE LOGIC: Store the URL in the token's metadata
-            saveBtn.onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                if (!selection || !selection.length) {
-                    OBR.notification.show("Select a token first!", "WARNING");
-                    return;
-                }
-
-                await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/url`] = input.value.trim();
+                // Watch for when the user clicks a token on the map
+                OBR_SDK.player.onChange(async (player) => {
+                    const selection = player.selection;
+                    if (selection && selection.length > 0) {
+                        const items = await OBR_SDK.scene.items.getItems(selection);
+                        const token = items[0];
+                        if (token) {
+                            const savedUrl = token.metadata[`${ID}/url`];
+                            input.value = savedUrl || "";
+                            showBtn.disabled = !savedUrl;
+                            status.innerText = `Token: ${token.name || "Selected"}`;
+                        }
+                    } else {
+                        status.innerText = "Select a token";
+                        showBtn.disabled = true;
+                        input.value = "";
                     }
                 });
-                
-                OBR.notification.show("Link Saved!");
-                showBtn.disabled = !input.value.trim();
-            };
 
-            // 3. SHOW LOGIC: Open within Owlbear using a Modal
-            showBtn.onclick = () => {
-                const url = input.value.trim();
-                if (url) {
-                    // Ensure the URL has a protocol
-                    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                // Logic to save the URL into the token's metadata
+                saveBtn.onclick = async () => {
+                    const selection = await OBR_SDK.player.getSelection();
+                    if (!selection || !selection.length) {
+                        OBR_SDK.notification.show("Select a token first!");
+                        return;
+                    }
                     
-                    OBR.modal.open({
-                        id: `${ID}/modal`,
-                        url: fullUrl,
-                        height: 600,
-                        width: 800,
+                    await OBR_SDK.scene.items.updateItems(selection, (items) => {
+                        for (let item of items) {
+                            item.metadata[`${ID}/url`] = input.value.trim();
+                        }
                     });
-                }
-            };
-        });
+                    OBR_SDK.notification.show("URL Saved!");
+                    showBtn.disabled = !input.value.trim();
+                };
+
+                // Logic to open the saved URL
+                showBtn.onclick = () => {
+                    const url = input.value.trim();
+                    if (url) {
+                        window.open(url, '_blank');
+                    }
+                };
+            });
+        }
     </script>
 </body>
 </html>

@@ -6,30 +6,30 @@
     <title>Token Stats Linker</title>
     <style>
         body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
-        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; transition: background 0.2s; }
+        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
         button:hover { background: #45a049; }
+        #popOutBtn { width: auto; padding: 4px 8px; font-size: 10px; background: #3d5afe; }
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
-        input:focus { border-color: #3d5afe; }
-        #status { font-size: 11px; color: #aaa; text-align: center; margin-bottom: 8px; font-weight: bold; }
-        
-        /* The Iframe Container */
+        #status { font-size: 11px; color: #aaa; font-weight: bold; }
         #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
         .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
-    <div id="status">Waiting for Owlbear...</div>
+    <div class="header">
+        <div id="status">Waiting for Owlbear...</div>
+        <button id="popOutBtn">POP OUT</button>
+    </div>
     
     <div class="controls">
         <input type="text" id="urlInput" placeholder="Paste link here...">
         <button id="saveBtn">SAVE LINK TO TOKEN</button>
     </div>
 
-    <div id="frameContainer">
-        <iframe id="statsFrame" src=""></iframe>
-    </div>
+    <div id="frameContainer"><iframe id="statsFrame" src=""></iframe></div>
     <div id="noLinkMsg" class="placeholder">No link saved. Select a token or paste a URL.</div>
 
     <script type="module">
@@ -39,13 +39,25 @@
         OBR.onReady(async () => {
             const status = document.getElementById('status');
             const saveBtn = document.getElementById('saveBtn');
+            const popOutBtn = document.getElementById('popOutBtn');
             const input = document.getElementById('urlInput');
             const frameContainer = document.getElementById('frameContainer');
             const statsFrame = document.getElementById('statsFrame');
             const noLinkMsg = document.getElementById('noLinkMsg');
 
-            status.innerText = "CONNECTED! Select a token.";
+            status.innerText = "CONNECTED";
             status.style.color = "lime";
+
+            // 1. POP OUT LOGIC
+            popOutBtn.onclick = async () => {
+                // This tells OBR to take the current action window and make it a popup
+                await OBR.action.setAppearance({
+                    width: 600,
+                    height: 800,
+                    boxpx: 20 // Margin from edges
+                });
+                // Note: In OBR, once set to a popup, the user can drag the corner to resize!
+            };
 
             const updateDisplay = (url, force = false) => {
                 if (!url || url.trim() === "") {
@@ -54,43 +66,29 @@
                     noLinkMsg.style.display = "flex";
                     return;
                 }
-
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
                 frameContainer.style.display = "block";
                 noLinkMsg.style.display = "none";
 
-                // Normalize URLs for comparison to prevent unnecessary reloads
                 const currentSrc = statsFrame.src.toLowerCase().replace(/\/$/, "");
                 const newUrl = fullUrl.toLowerCase().replace(/\/$/, "");
 
-                // Logic: Reload if 'force' is true OR the URL is actually different
                 if (force || currentSrc !== newUrl) {
                     statsFrame.src = fullUrl;
                     localStorage.setItem(`${ID}/last-url`, url);
                 }
             };
 
-            // 1. RE-ACTIVATE/STARTUP LOGIC
-            const refreshState = () => {
+            setTimeout(() => {
                 const lastUrl = localStorage.getItem(`${ID}/last-url`);
-                if (lastUrl) {
-                    input.value = lastUrl;
-                    updateDisplay(lastUrl, true); // Force is true to fix display on switch-back
-                }
-            };
+                if (lastUrl) { input.value = lastUrl; updateDisplay(lastUrl, true); }
+            }, 150);
 
-            // Small delay to ensure OBR is ready
-            setTimeout(refreshState, 150);
+            input.oninput = () => localStorage.setItem(`${ID}/last-url`, input.value.trim());
 
-            // 2. INPUT MEMORY
-            input.oninput = () => {
-                localStorage.setItem(`${ID}/last-url`, input.value.trim());
-            };
-
-            // 3. SELECTION CHANGE LOGIC
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
-                if (selection && selection.length > 0) {
+                if (selection?.length > 0) {
                     const items = await OBR.scene.items.getItems(selection);
                     const token = items[0];
                     if (token) {
@@ -98,52 +96,36 @@
                         if (savedUrl) {
                             input.value = savedUrl;
                             status.innerText = `Token: ${token.name || "Selected"}`;
-                            updateDisplay(savedUrl, false); // False avoids flickering if URL is same
+                            updateDisplay(savedUrl, false); 
                         }
                     }
-                } else {
-                    status.innerText = "Select a token to update link";
                 }
             });
 
-            // 4. SAVE & OPTIMIZE LOGIC
             saveBtn.onclick = async () => {
-    const selection = await OBR.player.getSelection();
-    if (!selection || !selection.length) {
-        OBR.notification.show("Select a token first!", "WARNING");
-        return;
-    }
+                const selection = await OBR.player.getSelection();
+                if (!selection?.length) return;
 
-    let url = input.value.trim();
-    
-    // --- START SURGICAL FIXER ---
-    // Only runs if the specific 5e.tools hash pattern is found
-    if (url.includes("bestiary.html#")) {
-        // 1. Convert %20 and other codes back to real characters (spaces/underscores)
-        url = decodeURIComponent(url); 
-        
-        // 2. Perform the 5e.tools transformation
-        url = url.replace("bestiary.html#", "bestiary/")
-                 .replace(/ /g, "-")  // Replace spaces with dashes
-                 .replace(/_/g, "-")  // Replace underscores with dashes
-                 + ".html";
-                 
-        // 3. Clean up double dashes (e.g., "young--red-dragon")
-        url = url.replace(/-+/g, "-"); 
-    }
-    // --- END SURGICAL FIXER ---
+                let url = input.value.trim();
+                
+                // Surgical Fixer: Only touches 5e.tools links
+                if (url.includes("bestiary.html#")) {
+                    url = decodeURIComponent(url);
+                    url = url.replace("bestiary.html#", "bestiary/")
+                             .replace(/ /g, "-")
+                             .replace(/_/g, "-")
+                             + ".html";
+                    url = url.replace(/-+/g, "-");
+                }
 
-    // Save to the token metadata
-    await OBR.scene.items.updateItems(selection, (items) => {
-        for (let item of items) {
-            item.metadata[`${ID}/url`] = url;
-        }
-    });
-    
-    input.value = url; 
-    updateDisplay(url, true);
-    OBR.notification.show("Link Saved!");
-};
+                await OBR.scene.items.updateItems(selection, (items) => {
+                    for (let item of items) { item.metadata[`${ID}/url`] = url; }
+                });
+                
+                input.value = url; 
+                updateDisplay(url, true);
+                OBR.notification.show("Link Saved!");
+            };
         });
     </script>
 </body>

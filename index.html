@@ -204,6 +204,15 @@
                         item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
+
+                // REFRESH UI IMMEDIATELY
+                if (url) {
+                    updateIframe(url);
+                    showLayer('statsFrame');
+                } else {
+                    showLayer('notesArea');
+                }
+
                 OBR.notification.show("Saved!");
             };
 
@@ -222,6 +231,7 @@
                         item.metadata[`${ID}/private`] = false;
                     }
                 });
+                
                 OBR.notification.show("Cleared!");
                 showLayer('notesArea');
             };

@@ -3,36 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Token Stats Linker</title>
+    <title>Token Stats & Notes</title>
     <style>
         body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
         .header { display: flex; justify-content: center; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
-        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; transition: background 0.2s; }
+        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
         button:hover { background: #45a049; }
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
-        input:focus { border-color: #4caf50; }
-        #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
         
-        #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
+        /* Container for the content */
+        #contentArea { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Iframe Mode */
+        #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
+
+        /* Notes Mode */
+        #notesArea { flex-grow: 1; width: 100%; padding: 10px; box-sizing: border-box; background: #1a1a1a; color: #ddd; border: 1px solid #444; border-radius: 4px; resize: none; font-family: inherit; font-size: 14px; display: none; }
+        #notesArea:focus { outline: 1px solid #4caf50; }
+
         .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div id="status">Connected</div>
-    </div>
+    <div class="header"><div id="status">Connected</div></div>
     
     <div class="controls">
-        <input type="text" id="urlInput" placeholder="Paste 5e.tools or other link here...">
-        <button id="saveBtn">SAVE LINK TO TOKEN</button>
+        <input type="text" id="urlInput" placeholder="Paste URL here (or leave empty for notes)...">
+        <button id="saveBtn">SAVE TO TOKEN</button>
     </div>
 
-    <div id="frameContainer">
-        <iframe id="statsFrame" src=""></iframe>
+    <div id="contentArea">
+        <div id="frameContainer"><iframe id="statsFrame"></iframe></div>
+        <textarea id="notesArea" placeholder="No URL found. Type notes for this token here..."></textarea>
+        <div id="noSelectionMsg" class="placeholder">Select a token to begin.</div>
     </div>
-    <div id="noLinkMsg" class="placeholder">Select a token to view its stats or paste a new link.</div>
 
     <script type="module">
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
@@ -44,76 +51,68 @@
             const input = document.getElementById('urlInput');
             const frameContainer = document.getElementById('frameContainer');
             const statsFrame = document.getElementById('statsFrame');
-            const noLinkMsg = document.getElementById('noLinkMsg');
+            const notesArea = document.getElementById('notesArea');
+            const noSelectionMsg = document.getElementById('noSelectionMsg');
 
-            // --- UI UPDATE LOGIC ---
-            const updateDisplay = (url) => {
-                if (!url || url.trim() === "") {
-                    statsFrame.src = "";
-                    frameContainer.style.display = "none";
-                    noLinkMsg.style.display = "flex";
-                    return;
-                }
-
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                frameContainer.style.display = "block";
-                noLinkMsg.style.display = "none";
-
-                // Only update source if it's actually different (prevents flickering)
-                if (statsFrame.src !== fullUrl) {
-                    statsFrame.src = fullUrl;
-                }
+            const showView = (view) => {
+                frameContainer.style.display = view === 'url' ? 'block' : 'none';
+                notesArea.style.display = view === 'notes' ? 'block' : 'none';
+                noSelectionMsg.style.display = view === 'none' ? 'flex' : 'none';
             };
 
-            // --- TOKEN SELECTION LOGIC ---
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
-                if (selection && selection.length > 0) {
+                if (selection?.length > 0) {
                     const items = await OBR.scene.items.getItems(selection);
                     const token = items[0];
                     if (token) {
-                        const savedUrl = token.metadata[`${ID}/url`] || "";
-                        input.value = savedUrl;
-                        status.innerText = token.name ? `Token: ${token.name}` : "Token Selected";
-                        updateDisplay(savedUrl);
+                        status.innerText = token.name || "Token Selected";
+                        const url = token.metadata[`${ID}/url`] || "";
+                        const note = token.metadata[`${ID}/note`] || "";
+
+                        input.value = url;
+                        if (url) {
+                            statsFrame.src = url.startsWith('http') ? url : `https://${url}`;
+                            showView('url');
+                        } else {
+                            notesArea.value = note;
+                            showView('notes');
+                        }
                     }
                 } else {
                     status.innerText = "Connected";
+                    showView('none');
                 }
             });
 
-            // --- SAVE & SURGICAL FIXER LOGIC ---
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
-                if (!selection || !selection.length) {
-                    OBR.notification.show("Select a token first!", "WARNING");
-                    return;
-                }
+                if (!selection?.length) return;
 
                 let url = input.value.trim();
-                
-                // Only transform 5e.tools links
+                let note = notesArea.value;
+
+                // 5eTools Surgical Fixer
                 if (url.includes("bestiary.html#")) {
-                    // Convert %20 and others back to characters
-                    url = decodeURIComponent(url);
-                    // Standardize 5e.tools direct-link format
-                    url = url.replace("bestiary.html#", "bestiary/")
-                             .replace(/ /g, "-")  // Spaces to dashes
-                             .replace(/_/g, "-")  // Underscores to dashes
-                             + ".html";
-                    // Clean up any double-dashes created
+                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
                     url = url.replace(/-+/g, "-");
                 }
 
                 await OBR.scene.items.updateItems(selection, (items) => {
                     for (let item of items) {
                         item.metadata[`${ID}/url`] = url;
+                        item.metadata[`${ID}/note`] = note;
                     }
                 });
-                
-                input.value = url; 
-                updateDisplay(url);
-                OBR.notification.show("Link Saved!");
+
+                input.value = url;
+                if (url) {
+                    statsFrame.src = url.startsWith('http') ? url : `https://${url}`;
+                    showView('url');
+                } else {
+                    showView('notes');
+                }
+                OBR.notification.show("Saved!");
             };
         });
     </script>

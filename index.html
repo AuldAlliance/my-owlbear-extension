@@ -9,33 +9,32 @@
         .header { display: flex; justify-content: center; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
         button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
-        button:hover { background: #45a049; }
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
         
-        #contentArea { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        /* The Stack Container */
+        #contentArea { flex-grow: 1; position: relative; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; }
         
-        #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; display: none; }
-        iframe { width: 100%; height: 100%; border: none; }
+        /* Layering the elements on top of each other */
+        .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
+        .active { visibility: visible; }
 
-        #notesArea { flex-grow: 1; width: 100%; padding: 10px; box-sizing: border-box; background: #1a1a1a; color: #ddd; border: 1px solid #444; border-radius: 4px; resize: none; font-family: inherit; font-size: 14px; display: none; }
-        #notesArea:focus { outline: 1px solid #4caf50; }
-
-        .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; padding: 20px; }
+        #notesArea { padding: 10px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: #1a1a1a; }
+        .placeholder { display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
     <div class="header"><div id="status">Connected</div></div>
     
     <div class="controls">
-        <input type="text" id="urlInput" placeholder="Paste URL here (or leave empty for notes)...">
+        <input type="text" id="urlInput" placeholder="URL for Stats / Empty for Notes">
         <button id="saveBtn">SAVE TO TOKEN</button>
     </div>
 
     <div id="contentArea">
-        <div id="frameContainer"><iframe id="statsFrame"></iframe></div>
-        <textarea id="notesArea" placeholder="No URL found. Type notes for this token here..."></textarea>
-        <div id="noSelectionMsg" class="placeholder">Select a token to begin.</div>
+        <iframe id="statsFrame" class="layer"></iframe>
+        <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
+        <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
     </div>
 
     <script type="module">
@@ -46,27 +45,24 @@
             const status = document.getElementById('status');
             const saveBtn = document.getElementById('saveBtn');
             const input = document.getElementById('urlInput');
-            const frameContainer = document.getElementById('frameContainer');
             const statsFrame = document.getElementById('statsFrame');
             const notesArea = document.getElementById('notesArea');
             const noSelectionMsg = document.getElementById('noSelectionMsg');
 
-            const showView = (view) => {
-                frameContainer.style.display = view === 'url' ? 'block' : 'none';
-                notesArea.style.display = view === 'notes' ? 'block' : 'none';
-                noSelectionMsg.style.display = view === 'none' ? 'flex' : 'none';
+            const showLayer = (activeId) => {
+                [statsFrame, notesArea, noSelectionMsg].forEach(el => {
+                    el.classList.toggle('active', el.id === activeId);
+                });
             };
 
             const updateIframe = (url) => {
                 if (!url) return;
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                // Normalizing to prevent refresh on trailing slash
+                const current = statsFrame.src.replace(/\/$/, "");
+                const target = fullUrl.replace(/\/$/, "");
                 
-                // --- THE FIX: Only set src if it's a different address ---
-                // We normalize both to avoid trailing slash mismatches
-                const currentSrc = statsFrame.src.replace(/\/$/, "");
-                const newSrc = fullUrl.replace(/\/$/, "");
-                
-                if (currentSrc !== newSrc) {
+                if (current !== target) {
                     statsFrame.src = fullUrl;
                 }
             };
@@ -84,15 +80,15 @@
                         input.value = url;
                         if (url) {
                             updateIframe(url);
-                            showView('url');
+                            showLayer('statsFrame');
                         } else {
                             notesArea.value = note;
-                            showView('notes');
+                            showLayer('notesArea');
                         }
                     }
                 } else {
                     status.innerText = "Connected";
-                    showView('none');
+                    showLayer('noSelectionMsg');
                 }
             });
 
@@ -115,12 +111,11 @@
                     }
                 });
 
-                input.value = url;
                 if (url) {
                     updateIframe(url);
-                    showView('url');
+                    showLayer('statsFrame');
                 } else {
-                    showView('notes');
+                    showLayer('notesArea');
                 }
                 OBR.notification.show("Saved!");
             };

@@ -13,14 +13,11 @@
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
         
-        /* Container for the content */
         #contentArea { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Iframe Mode */
         #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* Notes Mode */
         #notesArea { flex-grow: 1; width: 100%; padding: 10px; box-sizing: border-box; background: #1a1a1a; color: #ddd; border: 1px solid #444; border-radius: 4px; resize: none; font-family: inherit; font-size: 14px; display: none; }
         #notesArea:focus { outline: 1px solid #4caf50; }
 
@@ -60,6 +57,20 @@
                 noSelectionMsg.style.display = view === 'none' ? 'flex' : 'none';
             };
 
+            const updateIframe = (url) => {
+                if (!url) return;
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                
+                // --- THE FIX: Only set src if it's a different address ---
+                // We normalize both to avoid trailing slash mismatches
+                const currentSrc = statsFrame.src.replace(/\/$/, "");
+                const newSrc = fullUrl.replace(/\/$/, "");
+                
+                if (currentSrc !== newSrc) {
+                    statsFrame.src = fullUrl;
+                }
+            };
+
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
                 if (selection?.length > 0) {
@@ -72,7 +83,7 @@
 
                         input.value = url;
                         if (url) {
-                            statsFrame.src = url.startsWith('http') ? url : `https://${url}`;
+                            updateIframe(url);
                             showView('url');
                         } else {
                             notesArea.value = note;
@@ -92,7 +103,6 @@
                 let url = input.value.trim();
                 let note = notesArea.value;
 
-                // 5eTools Surgical Fixer
                 if (url.includes("bestiary.html#")) {
                     url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
                     url = url.replace(/-+/g, "-");
@@ -107,7 +117,7 @@
 
                 input.value = url;
                 if (url) {
-                    statsFrame.src = url.startsWith('http') ? url : `https://${url}`;
+                    updateIframe(url);
                     showView('url');
                 } else {
                     showView('notes');

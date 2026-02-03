@@ -49,7 +49,6 @@
             status.innerText = "CONNECTED";
             status.style.color = "lime";
 
-            // If we are already in the popped-out modal, hide the button
             if (window.location.search.includes("isModal=true")) {
                 popOutBtn.style.display = "none";
             }
@@ -79,7 +78,6 @@
                 if (lastUrl) { input.value = lastUrl; updateDisplay(lastUrl, true); }
             }, 150);
 
-            // NEW MODAL POP-OUT LOGIC
             popOutBtn.onclick = async () => {
                 await OBR.modal.open({
                     id: `${ID}/modal`,
@@ -87,7 +85,6 @@
                     width: 800,
                     height: 600
                 });
-                // Optional: keep sidebar open or close it with OBR.action.close();
             };
 
             OBR.player.onChange(async (player) => {

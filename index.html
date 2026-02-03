@@ -8,8 +8,9 @@
         body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
-        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
-        #popOutBtn { width: auto; padding: 4px 10px; font-size: 11px; background: #3d5afe; border-radius: 4px; }
+        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; transition: background 0.2s; }
+        button:hover { background: #45a049; }
+        #popOutBtn { width: auto; padding: 4px 10px; font-size: 11px; background: #3d5afe; border-radius: 4px; color: white; border: none; }
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; }
         #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
@@ -39,46 +40,77 @@
             const popOutBtn = document.getElementById('popOutBtn');
             const input = document.getElementById('urlInput');
             const statsFrame = document.getElementById('statsFrame');
+            const frameContainer = document.getElementById('frameContainer');
+            const noLinkMsg = document.getElementById('noLinkMsg');
 
-            // 1. Full Screen / Large View Logic
+            // 1. SMART UPDATE (No refresh if same URL)
+            const updateDisplay = (url) => {
+                if (!url || url.trim() === "") {
+                    frameContainer.style.display = "none";
+                    noLinkMsg.style.display = "flex";
+                    return;
+                }
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                frameContainer.style.display = "block";
+                noLinkMsg.style.display = "none";
+
+                // Only update the iframe if the URL is actually different
+                if (statsFrame.src !== fullUrl) {
+                    statsFrame.src = fullUrl;
+                }
+            };
+
+            // 2. INITIALIZE FROM URL PARAMS (For Popups)
+            const params = new URLSearchParams(window.location.search);
+            const loadUrl = params.get('loadUrl');
+            if (loadUrl) {
+                const decoded = decodeURIComponent(loadUrl);
+                popOutBtn.style.display = "none"; // Hide button inside the popup
+                input.value = decoded;            // Show the URL in the text box
+                updateDisplay(decoded);           // Load the iframe
+            }
+
+            // 3. POP OUT LOGIC
             popOutBtn.onclick = async () => {
+                const currentUrl = input.value.trim();
+                // We pass the URL through the query string so the popup knows what to show
                 await OBR.modal.open({
                     id: `${ID}/modal`,
-                    url: window.location.href + "?isModal=true",
-                    width: window.innerWidth * 0.8, // 80% of screen width
-                    height: window.innerHeight * 0.8 // 80% of screen height
+                    url: `${window.location.origin}${window.location.pathname}?loadUrl=${encodeURIComponent(currentUrl)}`,
+                    width: 950,
+                    height: 850
                 });
             };
 
-            const updateDisplay = (url) => {
-                if (!url) return;
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                document.getElementById('frameContainer').style.display = "block";
-                document.getElementById('noLinkMsg').style.display = "none";
-                if (statsFrame.src !== fullUrl) statsFrame.src = fullUrl;
-            };
-
-            // Selection Logic
+            // 4. SELECTION CHANGE LOGIC
             OBR.player.onChange(async (player) => {
                 const items = await OBR.scene.items.getItems(player.selection || []);
-                if (items[0]?.metadata[`${ID}/url`]) {
-                    const url = items[0].metadata[`${ID}/url`];
-                    input.value = url;
-                    updateDisplay(url);
+                const tokenUrl = items[0]?.metadata[`${ID}/url`];
+                if (tokenUrl) {
+                    input.value = tokenUrl;
+                    updateDisplay(tokenUrl);
                 }
             });
 
-            // Save & Fixer Logic
+            // 5. SAVE & SURGICAL FIXER
             document.getElementById('saveBtn').onclick = async () => {
                 const selection = await OBR.player.getSelection();
+                if (!selection?.length) return;
+
                 let url = input.value.trim();
                 if (url.includes("bestiary.html#")) {
-                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                    url = decodeURIComponent(url);
+                    url = url.replace("bestiary.html#", "bestiary/")
+                             .replace(/ /g, "-")
+                             .replace(/_/g, "-") + ".html";
                     url = url.replace(/-+/g, "-");
                 }
+
                 await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) item.metadata[`${ID}/url`] = url;
+                    for (let item of items) { item.metadata[`${ID}/url`] = url; }
                 });
+                
+                input.value = url;
                 updateDisplay(url);
                 OBR.notification.show("Link Saved!");
             };

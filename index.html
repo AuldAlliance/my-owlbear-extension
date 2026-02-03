@@ -6,13 +6,16 @@
     <title>Token Stats Linker</title>
     <style>
         body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
-        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
+        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; transition: background 0.2s; }
         button:hover { background: #45a049; }
-        #popOutBtn { width: auto; padding: 4px 8px; font-size: 10px; background: #3d5afe; }
+        #popOutBtn { width: auto; padding: 4px 8px; font-size: 10px; background: #3d5afe; border-radius: 4px; }
+        #popOutBtn:hover { background: #2b3dbf; }
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
-        #status { font-size: 11px; color: #aaa; font-weight: bold; }
+        input:focus { border-color: #3d5afe; }
+        #status { font-size: 11px; color: #aaa; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        
         #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
         .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; padding: 20px; }
@@ -20,7 +23,7 @@
 </head>
 <body>
     <div class="header">
-        <div id="status">Waiting for Owlbear...</div>
+        <div id="status">CONNECTING...</div>
         <button id="popOutBtn">POP OUT</button>
     </div>
     
@@ -29,7 +32,9 @@
         <button id="saveBtn">SAVE LINK TO TOKEN</button>
     </div>
 
-    <div id="frameContainer"><iframe id="statsFrame" src=""></iframe></div>
+    <div id="frameContainer">
+        <iframe id="statsFrame" src=""></iframe>
+    </div>
     <div id="noLinkMsg" class="placeholder">No link saved. Select a token or paste a URL.</div>
 
     <script type="module">
@@ -48,16 +53,10 @@
             status.innerText = "CONNECTED";
             status.style.color = "lime";
 
-            // 1. POP OUT LOGIC
-            popOutBtn.onclick = async () => {
-                // This tells OBR to take the current action window and make it a popup
-                await OBR.action.setAppearance({
-                    width: 600,
-                    height: 800,
-                    boxpx: 20 // Margin from edges
-                });
-                // Note: In OBR, once set to a popup, the user can drag the corner to resize!
-            };
+            // Hide Pop Out button if we are already in the floating window
+            if (window.location.search.includes("popover")) {
+                popOutBtn.style.display = "none";
+            }
 
             const updateDisplay = (url, force = false) => {
                 if (!url || url.trim() === "") {
@@ -66,6 +65,7 @@
                     noLinkMsg.style.display = "flex";
                     return;
                 }
+
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
                 frameContainer.style.display = "block";
                 noLinkMsg.style.display = "none";
@@ -79,16 +79,34 @@
                 }
             };
 
+            // Restore last state
             setTimeout(() => {
                 const lastUrl = localStorage.getItem(`${ID}/last-url`);
-                if (lastUrl) { input.value = lastUrl; updateDisplay(lastUrl, true); }
+                if (lastUrl) {
+                    input.value = lastUrl;
+                    updateDisplay(lastUrl, true);
+                }
             }, 150);
 
-            input.oninput = () => localStorage.setItem(`${ID}/last-url`, input.value.trim());
+            // Pop Out Action
+            popOutBtn.onclick = async () => {
+                await OBR.popover.open({
+                    id: `${ID}/popover`,
+                    url: window.location.href + "?popover=true",
+                    height: 800,
+                    width: 600,
+                    disableClickAway: false // Allows you to click the map without it closing
+                });
+                await OBR.action.close(); // Close the sidebar version
+            };
+
+            input.oninput = () => {
+                localStorage.setItem(`${ID}/last-url`, input.value.trim());
+            };
 
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
-                if (selection?.length > 0) {
+                if (selection && selection.length > 0) {
                     const items = await OBR.scene.items.getItems(selection);
                     const token = items[0];
                     if (token) {
@@ -96,7 +114,7 @@
                         if (savedUrl) {
                             input.value = savedUrl;
                             status.innerText = `Token: ${token.name || "Selected"}`;
-                            updateDisplay(savedUrl, false); 
+                            updateDisplay(savedUrl, false);
                         }
                     }
                 }
@@ -104,11 +122,14 @@
 
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
-                if (!selection?.length) return;
+                if (!selection || !selection.length) {
+                    OBR.notification.show("Select a token first!", "WARNING");
+                    return;
+                }
 
                 let url = input.value.trim();
                 
-                // Surgical Fixer: Only touches 5e.tools links
+                // Surgical 5eTools Fixer
                 if (url.includes("bestiary.html#")) {
                     url = decodeURIComponent(url);
                     url = url.replace("bestiary.html#", "bestiary/")
@@ -119,7 +140,9 @@
                 }
 
                 await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) { item.metadata[`${ID}/url`] = url; }
+                    for (let item of items) {
+                        item.metadata[`${ID}/url`] = url;
+                    }
                 });
                 
                 input.value = url; 

@@ -5,19 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats & Notes</title>
     <style>
-        body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        /* THE SEMI-TRANSPARENT BACKGROUND */
+        body { 
+            background: rgba(31, 31, 31, 0.9); 
+            backdrop-filter: blur(8px); /* Optional: Adds that "frosted" blur effect */
+            -webkit-backdrop-filter: blur(8px);
+            color: white; 
+            font-family: sans-serif; 
+            padding: 12px; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            box-sizing: border-box; 
+        }
+
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
         
-        #gmTools { display: none; flex-direction: column; gap: 8px; border: 1px solid #333; padding: 8px; border-radius: 4px; background: #1a1a1a; }
+        /* GM Tools using a slightly darker translucent layer */
+        #gmTools { 
+            display: none; 
+            flex-direction: column; 
+            gap: 8px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            padding: 8px; 
+            border-radius: 4px; 
+            background: rgba(0, 0, 0, 0.2); 
+        }
+
         .gm-action-row { display: flex; align-items: center; gap: 8px; }
 
-        /* EYE TOGGLE BUTTON */
         #eyeToggle { 
             background: rgba(255, 255, 255, 0.05); 
-            border: 1px solid #555; 
+            border: 1px solid rgba(255, 255, 255, 0.2); 
             border-radius: 4px; 
             width: 42px; 
             height: 38px; 
@@ -29,22 +52,14 @@
             transition: all 0.2s ease;
             flex-shrink: 0;
         }
-        #eyeToggle:hover { background: rgba(255, 255, 255, 0.1); border-color: #888; }
-        
-        /* The SVG itself */
+        #eyeToggle:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.4); }
         #eyeToggle svg { width: 24px; height: 24px; pointer-events: none; }
-        
-        /* Visible State (Gray) */
         .eye-visible { fill: #bbb; }
-        /* Hidden State (Red) */
         .eye-hidden { fill: #ff4444; display: none; }
-
-        /* When the 'private' class is on the button, swap which SVG path shows */
         #eyeToggle.private { border-color: #ff4444; background: rgba(255, 68, 68, 0.1); }
         #eyeToggle.private .eye-visible { display: none; }
         #eyeToggle.private .eye-hidden { display: block; }
 
-        /* OFFICIAL OBR BLUE BUTTON */
         button#saveBtn { 
             flex-grow: 1; 
             padding: 10px; 
@@ -53,21 +68,54 @@
             border-radius: 4px; 
             font-weight: 600; 
             color: white !important; 
-            background-color: #2196F3 !important; /* Force Blue */
+            background-color: #2196F3 !important; 
             text-transform: uppercase; 
             font-size: 11px;
             letter-spacing: 0.5px;
         }
-        button#saveBtn:hover { background-color: #1976D2 !important; }
 
-        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; font-size: 13px; }
+        input[type="text"] { 
+            width: 100%; 
+            padding: 8px; 
+            box-sizing: border-box; 
+            background: rgba(0, 0, 0, 0.3); 
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 4px; 
+            outline: none; 
+            font-size: 13px; 
+        }
         
-        #contentArea { flex-grow: 1; position: relative; border: 1px solid #444; border-radius: 4px; background: #111; overflow: hidden; }
+        #contentArea { 
+            flex-grow: 1; 
+            position: relative; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 4px; 
+            background: rgba(0, 0, 0, 0.2); 
+            overflow: hidden; 
+        }
+
         .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
         .active { visibility: visible; }
 
-        #notesArea { padding: 12px; box-sizing: border-box; color: #eee; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; }
-        .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; font-style: italic; text-align: center; padding: 20px; gap: 12px; }
+        #notesArea { 
+            padding: 12px; 
+            box-sizing: border-box; 
+            color: #eee; 
+            resize: none; 
+            font-family: inherit; 
+            font-size: 14px; 
+            background: transparent; 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            outline: none; 
+        }
+
+        /* Set iframe background to transparent so the body shows through */
+        #statsFrame { background: transparent; }
+
+        .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 12px; }
     </style>
 </head>
 <body>
@@ -91,8 +139,8 @@
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
         <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
         <div id="secretMsg" class="layer placeholder">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="#444"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>
-            <div style="font-size: 13px; color: #666; margin-top: 10px;">Information hidden by GM</div>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#666"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>
+            <div style="font-size: 13px; color: #888; margin-top: 10px;">Information hidden by GM</div>
         </div>
     </div>
 

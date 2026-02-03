@@ -5,90 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats Linker</title>
     <style>
-        body { background: #242424; color: white; font-family: sans-serif; padding: 16px; margin: 0; overflow: hidden; }
-        .wrapper { display: flex; flex-direction: column; gap: 10px; }
-        button { width: 100%; padding: 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #3d5afe; }
-        button:disabled { background: #444; color: #888; cursor: not-allowed; }
-        #saveBtn { background: #4caf50; }
-        input { width: 100%; padding: 10px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; }
-        #status { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }
+        body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
+        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; }
+        #status { font-size: 11px; color: #aaa; text-align: center; margin-bottom: 8px; }
+        
+        /* The Iframe Container */
+        #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; }
     </style>
 </head>
 <body>
-    <div class="wrapper">
-        <button id="showStatsBtn" disabled>VIEW LINK</button>
+    <div id="status">Waiting for Owlbear...</div>
+    
+    <div class="controls">
         <input type="text" id="urlInput" placeholder="Paste URL here...">
         <button id="saveBtn">SAVE LINK TO TOKEN</button>
-        <div id="status">Waiting for Owlbear...</div>
     </div>
+
+    <div id="frameContainer">
+        <iframe id="statsFrame" src=""></iframe>
+    </div>
+    <div id="noLinkMsg" class="placeholder">No link saved for this token.</div>
 
     <script type="module">
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
-
         const ID = "com.auldalliance.stats-linker";
 
-        // Everything must happen inside onReady
         OBR.onReady(async () => {
             const status = document.getElementById('status');
-            const showBtn = document.getElementById('showStatsBtn');
             const saveBtn = document.getElementById('saveBtn');
             const input = document.getElementById('urlInput');
+            const frameContainer = document.getElementById('frameContainer');
+            const statsFrame = document.getElementById('statsFrame');
+            const noLinkMsg = document.getElementById('noLinkMsg');
 
             status.innerText = "CONNECTED! Select a token.";
             status.style.color = "lime";
 
-            // Watch for selection changes
+            const updateDisplay = (url) => {
+                if (url) {
+                    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                    statsFrame.src = fullUrl;
+                    frameContainer.style.display = "block";
+                    noLinkMsg.style.display = "none";
+                } else {
+                    statsFrame.src = "";
+                    frameContainer.style.display = "none";
+                    noLinkMsg.style.display = "flex";
+                }
+            };
+
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
                 if (selection && selection.length > 0) {
                     const items = await OBR.scene.items.getItems(selection);
-                    const token = items[0]; // Take the first selected item
-                    
+                    const token = items[0];
                     if (token) {
-                        // Metadata is stored in a namespaced object
-                        const savedUrl = token.metadata[`${ID}/url`];
-                        input.value = savedUrl || "";
-                        showBtn.disabled = !savedUrl;
+                        const savedUrl = token.metadata[`${ID}/url`] || "";
+                        input.value = savedUrl;
                         status.innerText = `Token: ${token.name || "Selected"}`;
+                        updateDisplay(savedUrl);
                     }
                 } else {
                     status.innerText = "Select a token";
-                    showBtn.disabled = true;
                     input.value = "";
+                    updateDisplay("");
                 }
             });
 
-            // Save logic
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
-                if (!selection || !selection.length) {
-                    OBR.notification.show("Select a token first!", "WARNING");
-                    return;
-                }
+                if (!selection || !selection.length) return;
 
+                const url = input.value.trim();
                 await OBR.scene.items.updateItems(selection, (items) => {
                     for (let item of items) {
-                        item.metadata[`${ID}/url`] = input.value.trim();
+                        item.metadata[`${ID}/url`] = url;
                     }
                 });
-                
-                OBR.notification.show("URL Saved to Metadata");
-                showBtn.disabled = !input.value.trim();
-            };
-
-            // 3. Open URL logic (Opens INSIDE Owlbear Rodeo)
-            showBtn.onclick = () => {
-                const url = input.value.trim();
-                if (url) {
-                    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                    
-                    OBR.modal.open({
-                        id: `${ID}/view-stats`,
-                        url: fullUrl,
-                        height: 600,
-                        width: 800,
-                    });
-                }
+                updateDisplay(url);
+                OBR.notification.show("Link Updated!");
             };
         });
     </script>

@@ -166,11 +166,22 @@
                     if (url) {
                         updateIframe(url);
                         showLayer('statsFrame');
-                    } else {
+                    } else if (note) {
+                        // Only show the notes area if there is actually a note
                         notesArea.value = note;
                         notesArea.readOnly = !isGM;
-                        notesArea.classList.add('active'); // Directly adding active for safety
                         showLayer('notesArea');
+                    } else {
+                        // If both are empty, show the "Select a token" or a "No data" message
+                        // This prevents players from seeing the "Type notes here" box
+                        if (!isGM) {
+                            noSelectionMsg.innerText = "No information available for this token.";
+                            showLayer('noSelectionMsg');
+                        } else {
+                            // GMs still see the notes area so they can type
+                            notesArea.value = "";
+                            showLayer('notesArea');
+                        }
                     }
                 }
             });

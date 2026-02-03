@@ -8,21 +8,19 @@
         body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
-        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; transition: background 0.2s; }
-        button:hover { background: #45a049; }
+        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
         #popOutBtn { width: auto; padding: 4px 10px; font-size: 11px; background: #3d5afe; border-radius: 4px; }
-        #popOutBtn:hover { background: #2b3dbf; }
         input { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
-        #status { font-size: 11px; color: #aaa; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        #status { font-size: 11px; color: #aaa; font-weight: bold; }
         #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
-        .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; padding: 20px; }
+        .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div id="status">CONNECTING...</div>
-        <button id="popOutBtn">POP OUT</button>
+        <div id="status">CONNECTED</div>
+        <button id="popOutBtn">FULL VIEW</button>
     </div>
     
     <div class="controls">
@@ -31,103 +29,57 @@
     </div>
 
     <div id="frameContainer"><iframe id="statsFrame" src=""></iframe></div>
-    <div id="noLinkMsg" class="placeholder">No link saved. Select a token or paste a URL.</div>
+    <div id="noLinkMsg" class="placeholder">No link saved.</div>
 
     <script type="module">
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
         const ID = "com.auldalliance.stats-linker";
 
         OBR.onReady(async () => {
-            const status = document.getElementById('status');
-            const saveBtn = document.getElementById('saveBtn');
             const popOutBtn = document.getElementById('popOutBtn');
             const input = document.getElementById('urlInput');
-            const frameContainer = document.getElementById('frameContainer');
             const statsFrame = document.getElementById('statsFrame');
-            const noLinkMsg = document.getElementById('noLinkMsg');
 
-            status.innerText = "CONNECTED";
-            status.style.color = "lime";
-
-            // If we are in the popped-out version, hide the button
-            if (window.location.search.includes("isPopped=true")) {
-                popOutBtn.style.display = "none";
-            }
-
-            const updateDisplay = (url, force = false) => {
-                if (!url || url.trim() === "") {
-                    statsFrame.src = "";
-                    frameContainer.style.display = "none";
-                    noLinkMsg.style.display = "flex";
-                    return;
-                }
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                frameContainer.style.display = "block";
-                noLinkMsg.style.display = "none";
-
-                const currentSrc = statsFrame.src.toLowerCase().replace(/\/$/, "");
-                const newUrl = fullUrl.toLowerCase().replace(/\/$/, "");
-
-                if (force || currentSrc !== newUrl) {
-                    statsFrame.src = fullUrl;
-                    localStorage.setItem(`${ID}/last-url`, url);
-                }
-            };
-
-            setTimeout(() => {
-                const lastUrl = localStorage.getItem(`${ID}/last-url`);
-                if (lastUrl) { input.value = lastUrl; updateDisplay(lastUrl, true); }
-            }, 150);
-
-            // UPDATED POPOVER LOGIC FOR MOVABLE/RESIZABLE WINDOW
+            // 1. Full Screen / Large View Logic
             popOutBtn.onclick = async () => {
-                await OBR.popover.open({
-                    id: `${ID}/popover`,
-                    url: window.location.href + "?isPopped=true",
-                    width: 600,
-                    height: 800,
-                    anchorPosition: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
-                    anchorOrigin: "CENTER",
-                    transformOrigin: "CENTER",
-                    disableClickAway: true // Prevents closing when clicking the map
+                await OBR.modal.open({
+                    id: `${ID}/modal`,
+                    url: window.location.href + "?isModal=true",
+                    width: window.innerWidth * 0.8, // 80% of screen width
+                    height: window.innerHeight * 0.8 // 80% of screen height
                 });
-                // Closes the sidebar to prevent duplicate controls
-                await OBR.action.close();
             };
 
+            const updateDisplay = (url) => {
+                if (!url) return;
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                document.getElementById('frameContainer').style.display = "block";
+                document.getElementById('noLinkMsg').style.display = "none";
+                if (statsFrame.src !== fullUrl) statsFrame.src = fullUrl;
+            };
+
+            // Selection Logic
             OBR.player.onChange(async (player) => {
-                const selection = player.selection;
-                if (selection?.length > 0) {
-                    const items = await OBR.scene.items.getItems(selection);
-                    const token = items[0];
-                    if (token) {
-                        const savedUrl = token.metadata[`${ID}/url`] || "";
-                        if (savedUrl) {
-                            input.value = savedUrl;
-                            status.innerText = `Token: ${token.name || "Selected"}`;
-                            updateDisplay(savedUrl, false);
-                        }
-                    }
+                const items = await OBR.scene.items.getItems(player.selection || []);
+                if (items[0]?.metadata[`${ID}/url`]) {
+                    const url = items[0].metadata[`${ID}/url`];
+                    input.value = url;
+                    updateDisplay(url);
                 }
             });
 
-            saveBtn.onclick = async () => {
+            // Save & Fixer Logic
+            document.getElementById('saveBtn').onclick = async () => {
                 const selection = await OBR.player.getSelection();
-                if (!selection?.length) return;
                 let url = input.value.trim();
-                
                 if (url.includes("bestiary.html#")) {
-                    url = decodeURIComponent(url);
-                    url = url.replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
                     url = url.replace(/-+/g, "-");
                 }
-
                 await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) { item.metadata[`${ID}/url`] = url; }
+                    for (let item of items) item.metadata[`${ID}/url`] = url;
                 });
-                
-                input.value = url; 
-                updateDisplay(url, true);
+                updateDisplay(url);
                 OBR.notification.show("Link Saved!");
             };
         });

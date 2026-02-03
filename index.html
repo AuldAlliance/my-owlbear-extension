@@ -5,43 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats & Notes</title>
     <style>
-        /* OFFICIAL OBR SEMI-TRANSPARENT BACKGROUND */
-        body { 
-            background-color: rgba(32, 33, 36, 0.92); 
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            color: #eeeeee; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 12px; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        .header { margin-bottom: 8px; flex-shrink: 0; }
-        #status { font-size: 10px; color: #9aa0a6; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
-
+        body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
         
-        #gmTools { 
-            display: none; 
-            flex-direction: column; 
-            gap: 8px; 
-            background: rgba(0, 0, 0, 0.2);
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
+        #gmTools { display: none; flex-direction: column; gap: 8px; border: 1px solid #444; padding: 8px; border-radius: 4px; background: #1a1a1a; }
         .gm-action-row { display: flex; align-items: center; gap: 8px; }
 
-        /* NATIVE EYE TOGGLE */
+        /* NATIVE OBR STYLE TOGGLE */
         #eyeToggle { 
-            background: rgba(255, 255, 255, 0.05); 
-            border: 1px solid rgba(255, 255, 255, 0.2); 
+            background: #333; 
+            border: 1px solid #555; 
             border-radius: 4px; 
             width: 42px; 
             height: 38px; 
@@ -53,64 +27,27 @@
             flex-shrink: 0;
         }
         #eyeToggle svg { width: 22px; height: 22px; pointer-events: none; }
-        .eye-visible { fill: #bdc1c6; }
-        .eye-hidden { fill: #f28b82; display: none; }
-        
-        #eyeToggle.private { border-color: #f28b82; background: rgba(242, 139, 130, 0.15); }
+        .eye-visible { fill: #bbb; }
+        .eye-hidden { fill: #ff4444; display: none; }
+        #eyeToggle.private { border-color: #ff4444; }
         #eyeToggle.private .eye-visible { display: none; }
         #eyeToggle.private .eye-hidden { display: block; }
 
-        /* OBR BLUE SAVE BUTTON */
+        /* OBR BLUE BUTTON */
         button#saveBtn { 
-            flex-grow: 1; 
-            padding: 10px; 
-            cursor: pointer; 
-            border: none; 
-            border-radius: 4px; 
-            font-weight: 600; 
-            color: white; 
-            background-color: #3d5afe; 
-            text-transform: uppercase; 
-            font-size: 11px;
+            flex-grow: 1; padding: 10px; cursor: pointer; border: none; border-radius: 4px; 
+            font-weight: bold; color: white; background: #2196F3; text-transform: uppercase; font-size: 11px; 
         }
 
-        input[type="text"] { 
-            width: 100%; 
-            padding: 8px; 
-            background: rgba(0, 0, 0, 0.3); 
-            color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            border-radius: 4px; 
-            outline: none;
-        }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
+        #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
         
-        #contentArea { 
-            flex-grow: 1; 
-            position: relative; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            border-radius: 6px; 
-            background: rgba(0, 0, 0, 0.15); 
-            overflow: hidden; 
-        }
+        #contentArea { flex-grow: 1; position: relative; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; }
+        .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
+        .active { visibility: visible; }
 
-        .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; border: none; }
-        .active { display: block; }
-
-        #notesArea { 
-            padding: 12px; 
-            box-sizing: border-box; 
-            color: #eee; 
-            resize: none; 
-            font-family: inherit; 
-            font-size: 14px; 
-            background: transparent; 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-            outline: none; 
-        }
-
-        .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #5f6368; font-style: italic; text-align: center; padding: 20px; height: 100%; box-sizing: border-box; }
+        #notesArea { padding: 10px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: #1a1a1a; width: 100%; height: 100%; }
+        .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
     </style>
 </head>
 <body>
@@ -118,9 +55,9 @@
     
     <div class="controls">
         <div id="gmTools">
-            <input type="text" id="urlInput" placeholder="Paste URL here">
+            <input type="text" id="urlInput" placeholder="URL (Stats or Image)">
             <div class="gm-action-row">
-                <button id="eyeToggle" title="Toggle Player Visibility">
+                <button id="eyeToggle">
                     <svg class="eye-visible" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                     <svg class="eye-hidden" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>
                 </button>
@@ -132,33 +69,27 @@
     <div id="contentArea">
         <iframe id="statsFrame" class="layer"></iframe>
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
-        <div id="noSelectionMsg" class="layer placeholder active">Select a token...</div>
+        <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
         <div id="secretMsg" class="layer placeholder">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="#444"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>
-            <div style="font-size: 12px; margin-top: 10px;">Hidden by GM</div>
+            <div style="margin-top:10px">The GM has kept this secret.</div>
         </div>
     </div>
 
     <script type="module">
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
-        
         const ID = "com.auldalliance.stats-linker";
         let isPrivate = false;
 
         OBR.onReady(async () => {
             const role = await OBR.player.getRole();
-            const status = document.getElementById('status');
             const gmTools = document.getElementById('gmTools');
-            const eyeToggle = document.getElementById('eyeToggle');
+            const status = document.getElementById('status');
             const saveBtn = document.getElementById('saveBtn');
             const input = document.getElementById('urlInput');
+            const eyeToggle = document.getElementById('eyeToggle');
+            const statsFrame = document.getElementById('statsFrame');
             const notesArea = document.getElementById('notesArea');
-            const layers = document.querySelectorAll('.layer, .placeholder');
-
-            const showLayer = (id) => {
-                layers.forEach(l => l.classList.remove('active'));
-                document.getElementById(id).classList.add('active');
-            };
 
             const setPrivateUI = (state) => {
                 isPrivate = state;
@@ -168,6 +99,18 @@
             if (role === "GM") gmTools.style.display = "flex";
 
             eyeToggle.onclick = () => setPrivateUI(!isPrivate);
+
+            const showLayer = (activeId) => {
+                [statsFrame, notesArea, document.getElementById('noSelectionMsg'), document.getElementById('secretMsg')].forEach(el => {
+                    el.classList.toggle('active', el.id === activeId);
+                });
+            };
+
+            const updateIframe = (url) => {
+                if (!url) return;
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                if (statsFrame.src !== fullUrl) statsFrame.src = fullUrl;
+            };
 
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
@@ -179,41 +122,39 @@
 
                 const items = await OBR.scene.items.getItems(selection);
                 const token = items[0];
-                if (!token) return;
+                if (token) {
+                    const url = token.metadata[`${ID}/url`] || "";
+                    const note = token.metadata[`${ID}/note`] || "";
+                    const tokenPrivate = token.metadata[`${ID}/private`] === true;
 
-                const tokenUrl = token.metadata[`${ID}/url`] || "";
-                const tokenNote = token.metadata[`${ID}/note`] || "";
-                const tokenPrivate = token.metadata[`${ID}/private`] === true;
+                    status.innerText = token.name || "Token Selected";
+                    if (role === "GM") {
+                        input.value = url;
+                        setPrivateUI(tokenPrivate);
+                    }
 
-                status.innerText = token.name || "Token Selected";
+                    if (tokenPrivate && role !== "GM") {
+                        showLayer('secretMsg');
+                        return;
+                    }
 
-                if (role === "GM") {
-                    input.value = tokenUrl;
-                    notesArea.value = tokenNote;
-                    setPrivateUI(tokenPrivate);
-                }
-
-                if (tokenPrivate && role !== "GM") {
-                    showLayer('secretMsg');
-                } else if (tokenUrl) {
-                    const frame = document.getElementById('statsFrame');
-                    const fullUrl = tokenUrl.startsWith('http') ? tokenUrl : `https://${tokenUrl}`;
-                    if (frame.src !== fullUrl) frame.src = fullUrl;
-                    showLayer('statsFrame');
-                } else {
-                    notesArea.value = tokenNote;
-                    notesArea.readOnly = (role !== "GM");
-                    showLayer('notesArea');
+                    if (url) {
+                        updateIframe(url);
+                        showLayer('statsFrame');
+                    } else {
+                        notesArea.value = note;
+                        notesArea.readOnly = (role !== "GM");
+                        showLayer('notesArea');
+                    }
                 }
             });
 
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
                 if (!selection?.length) {
-                    OBR.notification.show("Select a token first!");
+                    OBR.notification.show("Select a token first!", "ERROR");
                     return;
                 }
-
                 await OBR.scene.items.updateItems(selection, (items) => {
                     for (let item of items) {
                         item.metadata[`${ID}/url`] = input.value.trim();
@@ -221,7 +162,7 @@
                         item.metadata[`${ID}/private`] = isPrivate;
                     }
                 });
-                OBR.notification.show(isPrivate ? "Saved (Hidden)" : "Saved (Visible)");
+                OBR.notification.show(isPrivate ? "Saved Privately!" : "Saved Publicly!");
             };
         });
     </script>

@@ -7,45 +7,74 @@
     <style>
         body { background: #242424; color: white; font-family: sans-serif; padding: 12px; margin: 0; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
+        #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
         
-        /* GM Tools Styling */
-        #gmTools { display: none; flex-direction: column; gap: 8px; border: 1px solid #4caf50; padding: 8px; border-radius: 4px; background: #1b2e1c; }
-        
-        /* NEW: Flex-row for Checkbox and Button */
-        .gm-action-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .gm-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4caf50; font-weight: bold; white-space: nowrap; }
-        
-        button { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white; background: #4caf50; }
-        /* Smaller button for the row */
-        #saveBtn { width: auto; flex-grow: 1; padding: 8px; }
+        #gmTools { display: none; flex-direction: column; gap: 8px; border: 1px solid #333; padding: 8px; border-radius: 4px; background: #1a1a1a; }
+        .gm-action-row { display: flex; align-items: center; gap: 8px; }
 
-        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; }
-        #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
+        /* NATIVE OBR STYLE TOGGLE */
+        #eyeToggle { 
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid #555; 
+            border-radius: 4px; 
+            width: 42px; 
+            height: 38px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+        #eyeToggle:hover { background: rgba(255, 255, 255, 0.1); border-color: #888; }
+        #eyeToggle svg { width: 24px; height: 24px; fill: #bbb; }
         
-        #contentArea { flex-grow: 1; position: relative; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; }
+        /* The "Hidden" state matches OBR's red slash style */
+        #eyeToggle.private { border-color: #ff4444; background: rgba(255, 68, 68, 0.1); }
+        #eyeToggle.private svg { fill: #ff4444; }
+
+        /* OFFICIAL OBR BLUE BUTTON */
+        button#saveBtn { 
+            flex-grow: 1; 
+            padding: 10px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: 600; 
+            color: white; 
+            background: #2196F3; 
+            text-transform: uppercase; 
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+        }
+        button#saveBtn:hover { background: #1976D2; }
+        button#saveBtn:active { background: #0D47A1; }
+
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: #333; color: white; border: 1px solid #555; border-radius: 4px; outline: none; font-size: 13px; }
+        input[type="text"]:focus { border-color: #2196F3; }
+        
+        #contentArea { flex-grow: 1; position: relative; border: 1px solid #444; border-radius: 4px; background: #111; overflow: hidden; }
         .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
         .active { visibility: visible; }
 
-        #notesArea { padding: 10px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: #1a1a1a; width: 100%; height: 100%; }
-        .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
-        .secret-icon { font-size: 30px; opacity: 0.5; }
+        #notesArea { padding: 12px; box-sizing: border-box; color: #eee; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; line-height: 1.4; }
+        .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; font-style: italic; text-align: center; padding: 20px; gap: 12px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div id="status">Ready</div>
-    </div>
+    <div class="header"><div id="status">Ready</div></div>
     
     <div class="controls">
         <div id="gmTools">
             <input type="text" id="urlInput" placeholder="URL (Stats or Image)">
             <div class="gm-action-row">
-                <div class="gm-row">
-                    <input type="checkbox" id="privateCheck"> 
-                    <label for="privateCheck">GM-ONLY</label>
-                </div>
-                <button id="saveBtn">SAVE TO TOKEN</button>
+                <button id="eyeToggle" title="Toggle Player Visibility">
+                    <span id="eyeIcon"></span>
+                </button>
+                <button id="saveBtn">Save to Token</button>
             </div>
         </div>
     </div>
@@ -55,8 +84,8 @@
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
         <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
         <div id="secretMsg" class="layer placeholder">
-            <div class="secret-icon">🔒</div>
-            <div>The GM has kept this secret.</div>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#444"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>
+            <div style="font-size: 13px;">Information hidden by GM</div>
         </div>
     </div>
 
@@ -64,27 +93,31 @@
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
         const ID = "com.auldalliance.stats-linker";
 
+        const iconVisible = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+        const iconHidden = `<svg viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>`;
+
+        let isPrivate = false;
+
         OBR.onReady(async () => {
             const role = await OBR.player.getRole();
             const gmTools = document.getElementById('gmTools');
-            const status = document.getElementById('status');
+            const eyeToggle = document.getElementById('eyeToggle');
+            const eyeIcon = document.getElementById('eyeIcon');
             const saveBtn = document.getElementById('saveBtn');
             const input = document.getElementById('urlInput');
-            const privateCheck = document.getElementById('privateCheck');
             const statsFrame = document.getElementById('statsFrame');
             const notesArea = document.getElementById('notesArea');
-            const noSelectionMsg = document.getElementById('noSelectionMsg');
-            const secretMsg = document.getElementById('secretMsg');
 
-            if (role === "GM") {
-                gmTools.style.display = "flex";
-            }
-
-            const showLayer = (activeId) => {
-                [statsFrame, notesArea, noSelectionMsg, secretMsg].forEach(el => {
-                    el.classList.toggle('active', el.id === activeId);
-                });
+            const setPrivateUI = (state) => {
+                isPrivate = state;
+                eyeIcon.innerHTML = isPrivate ? iconHidden : iconVisible;
+                eyeToggle.classList.toggle('private', isPrivate);
             };
+
+            setPrivateUI(false); 
+            if (role === "GM") gmTools.style.display = "flex";
+
+            eyeToggle.onclick = () => setPrivateUI(!isPrivate);
 
             const updateIframe = (url) => {
                 if (!url) return;
@@ -97,59 +130,50 @@
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
                 if (!selection || selection.length === 0) return;
-
                 const items = await OBR.scene.items.getItems(selection);
                 const token = items[0];
-                
                 if (token) {
-                    const isGM = (await OBR.player.getRole()) === "GM";
+                    const currentRole = await OBR.player.getRole();
+                    const isGM = currentRole === "GM";
                     const url = token.metadata[`${ID}/url`] || "";
                     const note = token.metadata[`${ID}/note`] || "";
-                    const isPrivate = token.metadata[`${ID}/private`] === true;
+                    const tokenIsPrivate = token.metadata[`${ID}/private`] === true;
 
                     status.innerText = token.name || "Token Selected";
-                    input.value = url;
-                    privateCheck.checked = isPrivate;
-
-                    if (isPrivate && !isGM) {
-                        showLayer('secretMsg');
-                        return;
+                    if (isGM) {
+                        input.value = url;
+                        setPrivateUI(tokenIsPrivate);
                     }
 
-                    if (url) {
+                    document.querySelectorAll('.layer').forEach(l => l.classList.remove('active'));
+
+                    if (tokenIsPrivate && !isGM) {
+                        document.getElementById('secretMsg').classList.add('active');
+                    } else if (url) {
                         updateIframe(url);
-                        showLayer('statsFrame');
+                        statsFrame.classList.add('active');
                     } else {
                         notesArea.value = note;
                         notesArea.readOnly = !isGM;
-                        showLayer('notesArea');
+                        notesArea.classList.add('active');
                     }
                 }
             });
 
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
-                
-                // NEW: Logic for "Nothing Selected"
-                if (!selection || selection.length === 0) {
-                    OBR.notification.show("No token selected! Click a token first.", "ERROR");
+                if (!selection?.length) {
+                    OBR.notification.show("Select a token first!", "ERROR");
                     return;
                 }
-
-                let url = input.value.trim();
-                if (url.includes("bestiary.html#")) {
-                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
-                }
-
                 await OBR.scene.items.updateItems(selection, (items) => {
                     for (let item of items) {
-                        item.metadata[`${ID}/url`] = url;
+                        item.metadata[`${ID}/url`] = input.value.trim();
                         item.metadata[`${ID}/note`] = notesArea.value;
-                        item.metadata[`${ID}/private`] = privateCheck.checked;
+                        item.metadata[`${ID}/private`] = isPrivate;
                     }
                 });
-
-                OBR.notification.show(privateCheck.checked ? "Saved Privately!" : "Saved Publicly!");
+                OBR.notification.show(isPrivate ? "Saved (Hidden)" : "Saved (Visible)");
             };
         });
     </script>

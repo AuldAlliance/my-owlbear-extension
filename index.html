@@ -13,6 +13,7 @@
         input:focus { border-color: #3d5afe; }
         #status { font-size: 11px; color: #aaa; text-align: center; margin-bottom: 8px; font-weight: bold; }
         
+        /* The Iframe Container */
         #frameContainer { flex-grow: 1; border: 1px solid #444; border-radius: 4px; background: #1a1a1a; overflow: hidden; display: none; }
         iframe { width: 100%; height: 100%; border: none; }
         .placeholder { flex-grow: 1; display: flex; align-items: center; justify-content: center; color: #666; font-style: italic; border: 1px dashed #444; text-align: center; padding: 20px; }
@@ -22,14 +23,14 @@
     <div id="status">Waiting for Owlbear...</div>
     
     <div class="controls">
-        <input type="text" id="urlInput" placeholder="Paste direct link (e.g. 5e.tools/bestiary/...)">
+        <input type="text" id="urlInput" placeholder="Paste link here...">
         <button id="saveBtn">SAVE LINK TO TOKEN</button>
     </div>
 
     <div id="frameContainer">
         <iframe id="statsFrame" src=""></iframe>
     </div>
-    <div id="noLinkMsg" class="placeholder">No link saved. Select a token or paste a direct URL.</div>
+    <div id="noLinkMsg" class="placeholder">No link saved. Select a token or paste a URL.</div>
 
     <script type="module">
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
@@ -58,30 +59,35 @@
                 frameContainer.style.display = "block";
                 noLinkMsg.style.display = "none";
 
-                // Compare lowercase and remove trailing slashes for the comparison
-                const normalize = (val) => val.toLowerCase().replace(/\/$/, "");
-                const isSameUrl = normalize(statsFrame.src).includes(normalize(url.trim()));
+                // Normalize URLs for comparison to prevent unnecessary reloads
+                const currentSrc = statsFrame.src.toLowerCase().replace(/\/$/, "");
+                const newUrl = fullUrl.toLowerCase().replace(/\/$/, "");
 
-                if (force || !isSameUrl) {
+                // Logic: Reload if 'force' is true OR the URL is actually different
+                if (force || currentSrc !== newUrl) {
                     statsFrame.src = fullUrl;
                     localStorage.setItem(`${ID}/last-url`, url);
                 }
             };
 
+            // 1. RE-ACTIVATE/STARTUP LOGIC
             const refreshState = () => {
                 const lastUrl = localStorage.getItem(`${ID}/last-url`);
                 if (lastUrl) {
                     input.value = lastUrl;
-                    updateDisplay(lastUrl, true); 
+                    updateDisplay(lastUrl, true); // Force is true to fix display on switch-back
                 }
             };
 
+            // Small delay to ensure OBR is ready
             setTimeout(refreshState, 150);
 
+            // 2. INPUT MEMORY
             input.oninput = () => {
                 localStorage.setItem(`${ID}/last-url`, input.value.trim());
             };
 
+            // 3. SELECTION CHANGE LOGIC
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
                 if (selection && selection.length > 0) {
@@ -92,7 +98,7 @@
                         if (savedUrl) {
                             input.value = savedUrl;
                             status.innerText = `Token: ${token.name || "Selected"}`;
-                            updateDisplay(savedUrl, false); 
+                            updateDisplay(savedUrl, false); // False avoids flickering if URL is same
                         }
                     }
                 } else {
@@ -100,6 +106,7 @@
                 }
             });
 
+            // 4. SAVE & OPTIMIZE LOGIC
             saveBtn.onclick = async () => {
                 const selection = await OBR.player.getSelection();
                 if (!selection || !selection.length) {
@@ -109,9 +116,16 @@
 
                 let url = input.value.trim();
                 
-                // Helper: Automatically convert hash links to direct links if possible for 5e.tools
+                // THE ADVANCED FIXER: Handles hashes, spaces (%20), and underscores (_)
+                // This converts 5e.tools search links into direct, stable iframe links
                 if (url.includes("bestiary.html#")) {
-                    url = url.replace("bestiary.html#", "bestiary/").replace("_", "-") + ".html";
+                    url = url.replace("bestiary.html#", "bestiary/")
+                             .replace(/%20/g, "-")  // Replaces all spaces
+                             .replace(/_/g, "-")    // Replaces all underscores
+                             + ".html";
+                    
+                    // Cleanup: Turn any accidental double-dashes into single dashes
+                    url = url.replace(/-+/g, "-"); 
                 }
 
                 await OBR.scene.items.updateItems(selection, (items) => {
@@ -120,9 +134,9 @@
                     }
                 });
                 
-                input.value = url; // Show the corrected URL in the box
-                updateDisplay(url, true);
-                OBR.notification.show("Link Saved!");
+                input.value = url; // Show the optimized URL in the UI
+                updateDisplay(url, true); // Force reload on manual save
+                OBR.notification.show("Link Saved & Optimized!");
             };
         });
     </script>

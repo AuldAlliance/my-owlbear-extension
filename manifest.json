@@ -6,7 +6,7 @@
     "title": "Token Links",
     "icon": "https://auldalliance.github.io/my-owlbear-extension/icon.svg",
     "popover": "https://auldalliance.github.io/my-owlbear-extension/index.html",
-    "width": 500,
-    "height": 600
+    "width": 450,
+    "height": 650
   }
 }

@@ -22,7 +22,7 @@
     </style>
 </head>
 <body>
-    <div class="header"><div id="status">Waiting for Selection...</div></div>
+    <div class="header"><div id="status">Ready</div></div>
     
     <div class="controls">
         <input type="text" id="urlInput" placeholder="URL for Stats / Empty for Notes">
@@ -61,18 +61,19 @@
                 if (current !== target) statsFrame.src = fullUrl;
             };
 
+            // Selection Logic
             OBR.player.onChange(async (player) => {
                 const selection = player.selection;
                 
-                // --- THE PERSISTENCE FIX ---
-                // If nothing is selected, we do nothing and return early.
-                // This keeps the previous token's data on screen.
+                // CRITICAL FIX: If selection is empty, stop and do nothing.
+                // Do not update status, do not hide layers, just return.
                 if (!selection || selection.length === 0) return;
 
                 const items = await OBR.scene.items.getItems(selection);
                 const token = items[0];
                 
-                if (token) {
+                // Ensure we only process tokens/images
+                if (token && (token.type === "IMAGE" || token.type === "CURVE")) {
                     status.innerText = token.name ? `Viewing: ${token.name}` : "Viewing Token";
                     const url = token.metadata[`${ID}/url`] || "";
                     const note = token.metadata[`${ID}/note`] || "";

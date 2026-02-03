@@ -33,97 +33,87 @@
     <div id="noLinkMsg" class="placeholder">No link saved. Select a token or paste a URL.</div>
 
     <script type="module">
-        import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
-        const ID = "com.auldalliance.stats-linker";
+    import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
+    const ID = "com.auldalliance.stats-linker";
 
-        OBR.onReady(async () => {
-            const status = document.getElementById('status');
-            const saveBtn = document.getElementById('saveBtn');
-            const input = document.getElementById('urlInput');
-            const frameContainer = document.getElementById('frameContainer');
-            const statsFrame = document.getElementById('statsFrame');
-            const noLinkMsg = document.getElementById('noLinkMsg');
+    OBR.onReady(async () => {
+        const status = document.getElementById('status');
+        const saveBtn = document.getElementById('saveBtn');
+        const input = document.getElementById('urlInput');
+        const frameContainer = document.getElementById('frameContainer');
+        const statsFrame = document.getElementById('statsFrame');
+        const noLinkMsg = document.getElementById('noLinkMsg');
 
-            status.innerText = "CONNECTED! Select a token.";
-            status.style.color = "lime";
+        status.innerText = "CONNECTED! Select a token.";
+        status.style.color = "lime";
 
-            // Helper to update the view
-            const updateDisplay = (url) => {
-                if (url && url.trim() !== "") {
-                    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                    // Set display to block BEFORE setting src to ensure the browser loads it
-                    frameContainer.style.display = "block";
-                    noLinkMsg.style.display = "none";
-                    
-                    // Only update src if it has actually changed (prevents flickering)
-                    if (statsFrame.src !== fullUrl) {
-                        statsFrame.src = fullUrl;
+        const updateDisplay = (url) => {
+            if (url && url.trim() !== "") {
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                frameContainer.style.display = "block";
+                noLinkMsg.style.display = "none";
+                
+                // FORCE REFRESH: Even if the URL is the same, we re-apply it 
+                // to ensure the browser paints the iframe content again.
+                statsFrame.src = fullUrl;
+                
+                localStorage.setItem(`${ID}/last-url`, url);
+            } else {
+                statsFrame.src = "";
+                frameContainer.style.display = "none";
+                noLinkMsg.style.display = "flex";
+            }
+        };
+
+        // --- THE "RE-ACTIVATE" FIX ---
+        // This runs every time the extension is opened/focused
+        const refreshState = () => {
+            const lastUrl = localStorage.getItem(`${ID}/last-url`);
+            if (lastUrl) {
+                input.value = lastUrl;
+                updateDisplay(lastUrl);
+            }
+        };
+
+        // Run immediately on start
+        setTimeout(refreshState, 150);
+
+        input.oninput = () => {
+            localStorage.setItem(`${ID}/last-url`, input.value.trim());
+        };
+
+        OBR.player.onChange(async (player) => {
+            const selection = player.selection;
+            if (selection && selection.length > 0) {
+                const items = await OBR.scene.items.getItems(selection);
+                const token = items[0];
+                if (token) {
+                    const savedUrl = token.metadata[`${ID}/url`] || "";
+                    if (savedUrl) {
+                        input.value = savedUrl;
+                        status.innerText = `Token: ${token.name || "Selected"}`;
+                        updateDisplay(savedUrl);
                     }
-                    localStorage.setItem(`${ID}/last-url`, url);
-                } else {
-                    statsFrame.src = "";
-                    frameContainer.style.display = "none";
-                    noLinkMsg.style.display = "flex";
                 }
-            };
+            }
+        });
 
-            // 1. STARTUP LOAD
-            // We wait 150ms to let the initial OBR sync finish before forcing the memory load
-            setTimeout(() => {
-                const lastUrl = localStorage.getItem(`${ID}/last-url`);
-                if (lastUrl && (!input.value || input.value === "")) {
-                    input.value = lastUrl;
-                    updateDisplay(lastUrl);
-                }
-            }, 150);
-
-            // 2. INPUT MEMORY
-            // Remembers what you type even if you don't save it to a token
-            input.oninput = () => {
-                localStorage.setItem(`${ID}/last-url`, input.value.trim());
-            };
-
-            // 3. SELECTION CHANGE
-            OBR.player.onChange(async (player) => {
-                const selection = player.selection;
-                if (selection && selection.length > 0) {
-                    const items = await OBR.scene.items.getItems(selection);
-                    const token = items[0];
-                    if (token) {
-                        const savedUrl = token.metadata[`${ID}/url`] || "";
-                        // If the token has a saved link, show it!
-                        if (savedUrl) {
-                            input.value = savedUrl;
-                            status.innerText = `Token: ${token.name || "Selected"}`;
-                            updateDisplay(savedUrl);
-                        }
-                    }
-                } else {
-                    // We don't clear the display here so you can keep looking 
-                    // at the last sheet while moving things on the map.
-                    status.innerText = "Select a token to update link";
+        saveBtn.onclick = async () => {
+            const selection = await OBR.player.getSelection();
+            if (!selection || !selection.length) {
+                OBR.notification.show("Select a token first!", "WARNING");
+                return;
+            }
+            const url = input.value.trim();
+            await OBR.scene.items.updateItems(selection, (items) => {
+                for (let item of items) {
+                    item.metadata[`${ID}/url`] = url;
                 }
             });
-
-            // 4. SAVE LOGIC
-            saveBtn.onclick = async () => {
-                const selection = await OBR.player.getSelection();
-                if (!selection || !selection.length) {
-                    OBR.notification.show("Select a token first to save this link!", "WARNING");
-                    return;
-                }
-
-                const url = input.value.trim();
-                await OBR.scene.items.updateItems(selection, (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/url`] = url;
-                    }
-                });
-                
-                updateDisplay(url);
-                OBR.notification.show("Link Saved to Token!");
-            };
-        });
-    </script>
+            updateDisplay(url);
+            OBR.notification.show("Link Saved!");
+        };
+    });
+</script>
 </body>
 </html>

@@ -119,11 +119,13 @@
     <script type="module">
     import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
     const ID = "com.auldalliance.stats-linker";
-    // Key for local storage to remember the last token ID
     const STORAGE_KEY = `${ID}_last_token_id`;
 
     OBR.onReady(async () => {
+        // 1. Cache the role once to avoid repeated async calls
         const role = await OBR.player.getRole();
+        const isGM = role === "GM";
+        
         const gmTools = document.getElementById('gmTools');
         const status = document.getElementById('status');
         const saveBtn = document.getElementById('saveBtn');
@@ -135,7 +137,7 @@
         const noSelectionMsg = document.getElementById('noSelectionMsg');
         const secretMsg = document.getElementById('secretMsg');
 
-        if (role === "GM") gmTools.style.display = "flex";
+        if (isGM) gmTools.style.display = "flex";
 
         const showLayer = (activeId) => {
             [statsFrame, notesArea, noSelectionMsg, secretMsg].forEach(el => {
@@ -146,22 +148,14 @@
         const updateIframe = (url) => {
             if (!url) return;
             const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+            // Prevent reloading the same URL repeatedly
             if (statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
                 statsFrame.src = fullUrl;
             }
         };
 
         const syncView = async (selection) => {
-            let tokenId;
-
-            if (selection && selection.length > 0) {
-                // If we have a new selection, use it and save it to memory
-                tokenId = selection[0];
-                localStorage.setItem(STORAGE_KEY, tokenId);
-            } else {
-                // If nothing is selected, try to get the last known token from memory
-                tokenId = localStorage.getItem(STORAGE_KEY);
-            }
+            let tokenId = (selection && selection.length > 0) ? selection[0] : localStorage.getItem(STORAGE_KEY);
 
             if (!tokenId) {
                 status.innerText = "Ready";
@@ -169,12 +163,13 @@
                 return;
             }
 
-            // Fetch the item data based on the ID we found
             const items = await OBR.scene.items.getItems([tokenId]);
             const token = items[0];
             
             if (token) {
-                const isGM = (await OBR.player.getRole()) === "GM";
+                // Save this ID as the last valid token seen
+                localStorage.setItem(STORAGE_KEY, tokenId);
+                
                 const url = token.metadata[`${ID}/url`] || "";
                 const note = token.metadata[`${ID}/note`] || "";
                 const isPrivate = token.metadata[`${ID}/private`] === true;
@@ -194,51 +189,38 @@
                 if (url) {
                     updateIframe(url);
                     showLayer('statsFrame');
-                } else if (note || isGM) {
+                } else {
                     notesArea.value = note;
                     notesArea.readOnly = !isGM;
-                    showLayer('notesArea');
-                } else {
-                    noSelectionMsg.innerText = "No information available.";
-                    showLayer('noSelectionMsg');
+                    // If no note and no URL, show "No info" for players, but Notes for GM
+                    (note || isGM) ? showLayer('notesArea') : (noSelectionMsg.innerText = "No information available.", showLayer('noSelectionMsg'));
                 }
             } else {
-                // If the token was deleted from the scene, clear memory
+                localStorage.removeItem(STORAGE_KEY);
                 status.innerText = "Ready";
                 showLayer('noSelectionMsg');
-                localStorage.removeItem(STORAGE_KEY);
             }
         };
 
-        // Run sync on load
-        const initialSelection = await OBR.player.getSelection();
-        syncView(initialSelection);
+        // Initialize
+        syncView(await OBR.player.getSelection());
 
-        // Run sync whenever selection changes
         OBR.player.onChange((player) => {
-            // Only trigger update if the selection actually contains something
-            // This prevents "clicking the map" from clearing the view
-            if (player.selection && player.selection.length > 0) {
-                syncView(player.selection);
-            }
+            if (player.selection?.length > 0) syncView(player.selection);
         });
 
         saveBtn.onclick = async () => {
-            // Try to get current selection, or fallback to the remembered token
-            let selection = await OBR.player.getSelection();
-            if (!selection?.length) {
-                const lastId = localStorage.getItem(STORAGE_KEY);
-                if (lastId) selection = [lastId];
-            }
-
-            if (!selection?.length) return OBR.notification.show("Select a token first!");
+            const currentSelection = await OBR.player.getSelection();
+            const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
+            
+            if (!tokenId) return OBR.notification.show("Select a token first!");
 
             let url = input.value.trim();
             if (url.includes("bestiary.html#")) {
                 url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
             }
 
-            await OBR.scene.items.updateItems(selection, (items) => {
+            await OBR.scene.items.updateItems([tokenId], (items) => {
                 for (let item of items) {
                     item.metadata[`${ID}/url`] = url;
                     item.metadata[`${ID}/note`] = notesArea.value;
@@ -246,23 +228,20 @@
                 }
             });
 
-            syncView(selection);
+            syncView([tokenId]);
             OBR.notification.show("Saved!");
         };
 
         clearBtn.onclick = async () => {
-            let selection = await OBR.player.getSelection();
-            if (!selection?.length) {
-                const lastId = localStorage.getItem(STORAGE_KEY);
-                if (lastId) selection = [lastId];
-            }
-            if (!selection?.length) return;
+            const currentSelection = await OBR.player.getSelection();
+            const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
+            if (!tokenId) return;
 
             input.value = "";
             notesArea.value = "";
             privateCheck.checked = false;
 
-            await OBR.scene.items.updateItems(selection, (items) => {
+            await OBR.scene.items.updateItems([tokenId], (items) => {
                 for (let item of items) {
                     item.metadata[`${ID}/url`] = "";
                     item.metadata[`${ID}/note`] = "";
@@ -270,8 +249,8 @@
                 }
             });
             
+            syncView([tokenId]);
             OBR.notification.show("Cleared!");
-            syncView(selection);
         };
     });
 </script>

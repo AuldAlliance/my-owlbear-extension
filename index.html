@@ -186,7 +186,8 @@
                     const note = token.metadata[`${ID}/note`] || "";
                     const isPrivate = token.metadata[`${ID}/private`] === true;
 
-                    status.innerText = token.name || "Token Selected";
+                    const label = token.text?.plainText;
+                    status.innerText = label && label.trim() !== "" ? label : "Token Selected";
                     
                     // Populate inputs
                     input.value = url;

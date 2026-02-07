@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats & Notes</title>
     <style>
-        /* 1. ROOT TRANSPARENCY - Essential for the frost effect to work in OBR */
+        /* ROOT TRANSPARENCY */
         html { background: transparent !important; }
 
         body { 
@@ -29,7 +29,7 @@
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
         
         #gmTools { 
-            display: none; 
+            display: none; /* Shown via JS */
             flex-direction: column; 
             gap: 8px; 
             border: 1px solid rgba(255, 255, 255, 0.1); 
@@ -135,24 +135,23 @@
             const notesArea = document.getElementById('notesArea');
             const noSelectionMsg = document.getElementById('noSelectionMsg');
             const secretMsg = document.getElementById('secretMsg');
+            const eyeContainer = document.querySelector('.eye-container');
 
-            if (isGM) gmTools.style.display = "flex";
+            // Show tools for everyone, hide only the privacy toggle for players
+            gmTools.style.display = "flex";
+            if (!isGM) {
+                eyeContainer.style.display = "none";
+            }
 
-            // Logic to lock/unlock inputs to prevent data overlap
             const updateInputStates = () => {
                 const hasUrl = input.value.trim().length > 0;
                 const hasNotes = notesArea.value.trim().length > 0;
 
-                // Lock URL bar if notes are present
                 input.disabled = hasNotes;
                 input.style.opacity = hasNotes ? "0.3" : "1";
-                input.style.cursor = hasNotes ? "not-allowed" : "text";
 
-                // Lock Notes area if URL is present (only for GM view)
-                if (isGM) {
-                    notesArea.style.opacity = hasUrl ? "0.3" : "1";
-                    notesArea.style.pointerEvents = hasUrl ? "none" : "auto";
-                }
+                notesArea.style.opacity = hasUrl ? "0.3" : "1";
+                notesArea.style.pointerEvents = hasUrl ? "none" : "auto";
             };
 
             const showLayer = (activeId) => {
@@ -170,7 +169,6 @@
             };
 
             const syncView = async (selection) => {
-                // Determine which token to show: current selection or last remembered
                 let tokenId = (selection && selection.length > 0) ? selection[0] : localStorage.getItem(STORAGE_KEY);
 
                 if (!tokenId) {
@@ -190,15 +188,18 @@
 
                     status.innerText = token.name || "Token Selected";
                     
-                    if (isGM) {
-                        input.value = url;
-                        privateCheck.checked = isPrivate;
-                        notesArea.value = note;
-                    }
+                    // Populate inputs
+                    input.value = url;
+                    notesArea.value = note;
+                    if (isGM) privateCheck.checked = isPrivate;
 
+                    // PRIVACY LOGIC
                     if (isPrivate && !isGM) {
                         showLayer('secretMsg');
+                        gmTools.style.visibility = "hidden"; 
                         return;
+                    } else {
+                        gmTools.style.visibility = "visible";
                     }
 
                     updateInputStates();
@@ -207,8 +208,7 @@
                         updateIframe(url);
                         showLayer('statsFrame');
                     } else {
-                        notesArea.readOnly = !isGM;
-                        (note || isGM) ? showLayer('notesArea') : (noSelectionMsg.innerText = "No information available.", showLayer('noSelectionMsg'));
+                        showLayer('notesArea');
                     }
                 } else {
                     localStorage.removeItem(STORAGE_KEY);
@@ -217,17 +217,18 @@
                 }
             };
 
-            // GM Input Listeners
             notesArea.oninput = updateInputStates;
             input.oninput = updateInputStates;
 
-            // Initialize
-            syncView(await OBR.player.getSelection());
-
             // Handle Selection Changes
             OBR.player.onChange((player) => {
-                // Only sync if there's an active selection to avoid clearing memory on map clicks
-                if (player.selection?.length > 0) syncView(player.selection);
+                if (player.selection) syncView(player.selection);
+            });
+
+            // Sync updates if another player/GM changes the data
+            OBR.scene.items.onChange(async () => {
+                const selection = await OBR.player.getSelection();
+                syncView(selection);
             });
 
             saveBtn.onclick = async () => {
@@ -246,11 +247,12 @@
                     for (let item of items) {
                         item.metadata[`${ID}/url`] = url;
                         item.metadata[`${ID}/note`] = notesArea.value;
-                        item.metadata[`${ID}/private`] = privateCheck.checked;
+                        // ONLY the GM can change the privacy metadata
+                        if (isGM) {
+                            item.metadata[`${ID}/private`] = privateCheck.checked;
+                        }
                     }
                 });
-
-                syncView([tokenId]);
                 OBR.notification.show("Saved!");
             };
 
@@ -259,22 +261,20 @@
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return;
 
-                input.value = "";
-                notesArea.value = "";
-                privateCheck.checked = false;
-
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
                         item.metadata[`${ID}/url`] = "";
                         item.metadata[`${ID}/note`] = "";
-                        item.metadata[`${ID}/private`] = false;
+                        // GM clear resets privacy; Player clear only resets content
+                        if (isGM) item.metadata[`${ID}/private`] = false;
                     }
                 });
                 
-                updateInputStates();
-                syncView([tokenId]);
                 OBR.notification.show("Cleared!");
             };
+
+            // Initial Load
+            syncView(await OBR.player.getSelection());
         });
     </script>
 </body>

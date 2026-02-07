@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats & Notes</title>
     <style>
-        /* ROOT TRANSPARENCY */
+        /* 1. ROOT TRANSPARENCY - Essential for the frost effect to work in OBR */
         html { background: transparent !important; }
 
         body { 
@@ -80,14 +80,10 @@
         .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
         .active { visibility: visible; }
 
+        iframe { background: white; width: 100%; height: 100%; }
         #notesArea { padding: 10px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; transition: opacity 0.2s; }
         .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
         .secret-icon { font-size: 30px; opacity: 0.3; }
-
-        /* ROLE SPECIFIC UI HIDING */
-        .is-player #urlInput, 
-        .is-player .eye-container, 
-        .is-player #clearBtn { display: none !important; }
     </style>
 </head>
 <body>
@@ -122,7 +118,6 @@
 
     <script type="module">
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
-        
         const ID = "com.auldalliance.stats-linker";
         const STORAGE_KEY = `${ID}_last_token_id`;
 
@@ -141,16 +136,19 @@
             const noSelectionMsg = document.getElementById('noSelectionMsg');
             const secretMsg = document.getElementById('secretMsg');
 
-            // Set a class on body to handle player-specific CSS
-            if (!isGM) document.body.classList.add('is-player');
+            if (isGM) gmTools.style.display = "flex";
 
+            // Logic to lock/unlock inputs to prevent data overlap
             const updateInputStates = () => {
                 const hasUrl = input.value.trim().length > 0;
                 const hasNotes = notesArea.value.trim().length > 0;
 
+                // Lock URL bar if notes are present
                 input.disabled = hasNotes;
                 input.style.opacity = hasNotes ? "0.3" : "1";
+                input.style.cursor = hasNotes ? "not-allowed" : "text";
 
+                // Lock Notes area if URL is present (only for GM view)
                 if (isGM) {
                     notesArea.style.opacity = hasUrl ? "0.3" : "1";
                     notesArea.style.pointerEvents = hasUrl ? "none" : "auto";
@@ -172,12 +170,12 @@
             };
 
             const syncView = async (selection) => {
+                // Determine which token to show: current selection or last remembered
                 let tokenId = (selection && selection.length > 0) ? selection[0] : localStorage.getItem(STORAGE_KEY);
 
                 if (!tokenId) {
                     status.innerText = "Ready";
                     showLayer('noSelectionMsg');
-                    gmTools.style.display = "none";
                     return;
                 }
 
@@ -192,20 +190,12 @@
 
                     status.innerText = token.name || "Token Selected";
                     
-                    // Logic for editing: Players can edit IF it's not private. GMs can always edit.
-                    const canEdit = isGM || !isPrivate;
-                    notesArea.value = note;
-                    notesArea.readOnly = !canEdit;
-
-                    // Show tools (which contains Save btn) if user has permission to edit
-                    gmTools.style.display = canEdit ? "flex" : "none";
-
                     if (isGM) {
                         input.value = url;
                         privateCheck.checked = isPrivate;
+                        notesArea.value = note;
                     }
 
-                    // Privacy Check for non-GMs
                     if (isPrivate && !isGM) {
                         showLayer('secretMsg');
                         return;
@@ -217,7 +207,8 @@
                         updateIframe(url);
                         showLayer('statsFrame');
                     } else {
-                        showLayer('notesArea');
+                        notesArea.readOnly = !isGM;
+                        (note || isGM) ? showLayer('notesArea') : (noSelectionMsg.innerText = "No information available.", showLayer('noSelectionMsg'));
                     }
                 } else {
                     localStorage.removeItem(STORAGE_KEY);
@@ -226,17 +217,17 @@
                 }
             };
 
+            // GM Input Listeners
             notesArea.oninput = updateInputStates;
             input.oninput = updateInputStates;
 
+            // Initialize
             syncView(await OBR.player.getSelection());
 
+            // Handle Selection Changes
             OBR.player.onChange((player) => {
-                syncView(player.selection);
-            });
-
-            OBR.scene.items.onChange(() => {
-                OBR.player.getSelection().then(syncView);
+                // Only sync if there's an active selection to avoid clearing memory on map clicks
+                if (player.selection?.length > 0) syncView(player.selection);
             });
 
             saveBtn.onclick = async () => {
@@ -245,34 +236,25 @@
                 
                 if (!tokenId) return OBR.notification.show("Select a token first!");
 
+                let url = input.value.trim();
+                // 5e.tools Bestiary link helper
+                if (url.includes("bestiary.html#")) {
+                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                }
+
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        if (isGM) {
-                            let url = input.value.trim();
-                            if (url.includes("bestiary.html#")) {
-                                url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
-                            }
-                            item.metadata[`${ID}/url`] = url;
-                            item.metadata[`${ID}/note`] = notesArea.value;
-                            item.metadata[`${ID}/private`] = privateCheck.checked;
-
-                            // Set PERMISSIONS so players can write to metadata if public
-                            item.permissions = {
-                                ...item.permissions,
-                                updateMetadata: privateCheck.checked ? "DEFAULT" : "ANYONE"
-                            };
-                        } else {
-                            // Player only updates the note part of metadata
-                            item.metadata[`${ID}/note`] = notesArea.value;
-                        }
+                        item.metadata[`${ID}/url`] = url;
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                        item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
 
+                syncView([tokenId]);
                 OBR.notification.show("Saved!");
             };
 
             clearBtn.onclick = async () => {
-                if (!isGM) return;
                 const currentSelection = await OBR.player.getSelection();
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return;
@@ -286,11 +268,11 @@
                         item.metadata[`${ID}/url`] = "";
                         item.metadata[`${ID}/note`] = "";
                         item.metadata[`${ID}/private`] = false;
-                        item.permissions = { ...item.permissions, updateMetadata: "DEFAULT" };
                     }
                 });
                 
                 updateInputStates();
+                syncView([tokenId]);
                 OBR.notification.show("Cleared!");
             };
         });

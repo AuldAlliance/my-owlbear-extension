@@ -172,38 +172,25 @@ popoutBtn.onclick = () => {
     if (url) {
         const fullUrl = url.startsWith('http') ? url : `https://${url}`;
         
-        // window.innerWidth is the width of YOUR extension window specifically
-        // We subtract a few pixels to ensure the browser sees it as a 'popup' and not a 'tab'
-        const w = window.innerWidth - 10;
-        const h = window.innerHeight - 10;
+        // 1. Get the exact size of your Owlbear extension window
+        const w = window.innerWidth;
+        const h = window.innerHeight;
 
-        // We calculate the position relative to the browser's current position
-        // screenX/Y is the browser's top-left corner.
-        // We add a guess for the UI offset or center it.
-        const left = (window.screenX || 0) + (window.outerWidth - window.innerWidth);
-        const top = (window.screenY || 0) + (window.outerHeight - window.innerHeight);
+        // 2. Get the absolute position of the extension on your monitor
+        // screenLeft/Top gives us the exact coordinates of the iframe's viewport
+        const left = window.screenLeft || window.screenX;
+        const top = window.screenTop || window.screenY;
 
-        // The key here is including 'location=no' and 'status=no' 
-        // AND ensuring the width/height are strictly defined.
-        const features = `
-            width=${w},
-            height=${h},
-            left=${left},
-            top=${top},
-            menubar=no,
-            toolbar=no,
-            location=no,
-            status=no,
-            resizable=yes,
-            scrollbars=yes
-        `.replace(/\s/g, ''); // Remove spaces for the feature string
+        // 3. Construct the feature string (no spaces allowed)
+        // We use 'popup=1' to force a window instead of a tab
+        const features = `left=${left},top=${top},width=${w},height=${h},popup=1,menubar=no,toolbar=no,location=no,status=no,resizable=yes`;
 
         const newWin = window.open(fullUrl, "_blank", features);
         
         if (newWin) {
             newWin.focus();
         } else {
-            OBR.notification.show("Pop-up blocked! Please check your browser settings.");
+            OBR.notification.show("Pop-up blocked!");
         }
     }
 };

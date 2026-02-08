@@ -97,7 +97,7 @@
                 </div>
                 <button id="saveBtn">Save</button>
                 <button id="clearBtn">Clear</button>
-                <button id="popoutBtn" title="Open in New Tab">
+                <button id="popoutBtn" title="Open in Floating Window">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </button>
             </div>
@@ -117,7 +117,7 @@
             <div class="error-text">Site Refused to Connect</div>
             <div style="font-size: 10px; margin-top: 5px; opacity: 0.8;">
                 The site blocks being shown in a frame.<br>
-                Try the <b>Pop-out button</b> above.
+                Try the <b>Floating Window</b> button above.
             </div>
         </div>
     </div>
@@ -140,6 +140,7 @@
             const privateCheck = document.getElementById('privateCheck');
             const statsFrame = document.getElementById('statsFrame');
             const notesArea = document.getElementById('notesArea');
+            const contentArea = document.getElementById('contentArea');
             
             let loadTimeout;
 
@@ -158,21 +159,24 @@
                 if (statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
                     showLayer('statsFrame');
                     clearTimeout(loadTimeout);
-                    
-                    // Show error if site doesn't signal it loaded within 3.5s
-                    loadTimeout = setTimeout(() => {
-                        showLayer('errorMsg');
-                    }, 3500);
-                    
+                    loadTimeout = setTimeout(() => showLayer('errorMsg'), 3500);
                     statsFrame.src = fullUrl;
                 }
             };
 
             statsFrame.onload = () => clearTimeout(loadTimeout);
 
+            // FLOATING WINDOW LOGIC
             popoutBtn.onclick = () => {
                 const url = input.value.trim();
-                if (url) window.open(url.startsWith('http') ? url : `https://${url}`, '_blank');
+                if (url) {
+                    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                    // Use the extension's current size for the popup
+                    const w = contentArea.offsetWidth || 600;
+                    const h = contentArea.offsetHeight || 800;
+                    const features = `width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
+                    window.open(fullUrl, "TokenStatsPopup", features);
+                }
             };
 
             const updateInputStates = () => {

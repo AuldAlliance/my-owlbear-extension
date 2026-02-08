@@ -166,34 +166,32 @@
 
             statsFrame.onload = () => clearTimeout(loadTimeout);
 
-// FLOATING WINDOW LOGIC
 popoutBtn.onclick = () => {
     const url = input.value.trim();
     if (url) {
         const fullUrl = url.startsWith('http') ? url : `https://${url}`;
         
-        // Get the position of the current browser window relative to the screen
-        const screenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX;
-        const screenTop = window.screenTop !== undefined ? window.screenTop : window.screenY;
+        // Use the actual width/height of the extension area
+        const w = window.innerWidth;
+        const h = window.innerHeight;
 
-        // Get the exact dimensions of the current extension iframe/window
-        const w = window.outerWidth || document.documentElement.clientWidth;
-        const h = window.outerHeight || document.documentElement.clientHeight;
+        // Determine where the extension is relative to the screen
+        // We use screenX/Y but add a fallback to center it if 0 is returned
+        const left = window.screenX || (window.screen.width / 2) - (w / 2);
+        const top = window.screenY || (window.screen.height / 2) - (h / 2);
 
-        // Calculate the absolute coordinates on the monitor
-        const left = screenLeft;
-        const top = screenTop;
-
-        const features = `width=${w},height=${h},top=${top},left=${left},menubar=no,toolbar=no,location=no,status=no,resizable=yes`;
+        // 'popup=yes' is a newer flag that helps prevent it from opening in a new tab
+        const features = `left=${left},top=${top},width=${w},height=${h},popup=yes,menubar=no,toolbar=no,location=no,status=no,resizable=yes`;
         
-        // Open the window
-        const newWin = window.open(fullUrl, "TokenStatsPopup", features);
+        const newWin = window.open(fullUrl, "_blank", features);
         
-        // Focus the window in case it opened behind
-        if (newWin) newWin.focus();
+        if (newWin) {
+            newWin.focus();
+        } else {
+            OBR.notification.show("Pop-up blocked! Please allow pop-ups for Owlbear Rodeo.");
+        }
     }
 };
-
             const updateInputStates = () => {
                 const hasUrl = input.value.trim().length > 0;
                 const hasNotes = notesArea.value.trim().length > 0;

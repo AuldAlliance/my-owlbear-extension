@@ -165,30 +165,45 @@
             };
 
             statsFrame.onload = () => clearTimeout(loadTimeout);
-
+            
+// pop out window code
 popoutBtn.onclick = () => {
     const url = input.value.trim();
     if (url) {
         const fullUrl = url.startsWith('http') ? url : `https://${url}`;
         
-        // Use the actual width/height of the extension area
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+        // window.innerWidth is the width of YOUR extension window specifically
+        // We subtract a few pixels to ensure the browser sees it as a 'popup' and not a 'tab'
+        const w = window.innerWidth - 10;
+        const h = window.innerHeight - 10;
 
-        // Determine where the extension is relative to the screen
-        // We use screenX/Y but add a fallback to center it if 0 is returned
-        const left = window.screenX || (window.screen.width / 2) - (w / 2);
-        const top = window.screenY || (window.screen.height / 2) - (h / 2);
+        // We calculate the position relative to the browser's current position
+        // screenX/Y is the browser's top-left corner.
+        // We add a guess for the UI offset or center it.
+        const left = (window.screenX || 0) + (window.outerWidth - window.innerWidth);
+        const top = (window.screenY || 0) + (window.outerHeight - window.innerHeight);
 
-        // 'popup=yes' is a newer flag that helps prevent it from opening in a new tab
-        const features = `left=${left},top=${top},width=${w},height=${h},popup=yes,menubar=no,toolbar=no,location=no,status=no,resizable=yes`;
-        
+        // The key here is including 'location=no' and 'status=no' 
+        // AND ensuring the width/height are strictly defined.
+        const features = `
+            width=${w},
+            height=${h},
+            left=${left},
+            top=${top},
+            menubar=no,
+            toolbar=no,
+            location=no,
+            status=no,
+            resizable=yes,
+            scrollbars=yes
+        `.replace(/\s/g, ''); // Remove spaces for the feature string
+
         const newWin = window.open(fullUrl, "_blank", features);
         
         if (newWin) {
             newWin.focus();
         } else {
-            OBR.notification.show("Pop-up blocked! Please allow pop-ups for Owlbear Rodeo.");
+            OBR.notification.show("Pop-up blocked! Please check your browser settings.");
         }
     }
 };

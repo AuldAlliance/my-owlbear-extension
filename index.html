@@ -121,9 +121,18 @@
                 const url = input.value.trim();
                 if (!url) return;
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                const w = contentArea.offsetWidth || 600;
-                const h = contentArea.offsetHeight || 800;
-                const features = `width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
+                
+                // Get the position of the content area relative to the browser window
+                const rect = contentArea.getBoundingClientRect();
+
+                // Calculate the position relative to the screen (monitor)
+                // rect.left/top is position within the browser, screenX/Y is where the browser is on the monitor
+                const left = window.screenX + rect.left;
+                const top = window.screenY + rect.top;
+                const w = rect.width || 600;
+                const h = rect.height || 800;
+
+                const features = `left=${left},top=${top},width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
                 
                 const popup = window.open(fullUrl, "TokenStatsPopup", features);
                 
@@ -141,7 +150,12 @@
                 if (statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
                     showLayer('statsFrame');
                     clearTimeout(loadTimeout);
-                    loadTimeout = setTimeout(() => showLayer('errorMsg'), 3000);
+                    loadTimeout = setTimeout(() => {
+                        // If iframe is still on 'about:blank' or hidden, show error
+                        if(document.getElementById('statsFrame').classList.contains('active')) {
+                            showLayer('errorMsg');
+                        }
+                    }, 3000);
                     statsFrame.src = fullUrl;
                 }
             };
@@ -170,7 +184,7 @@
                     const note = token.metadata[`${ID}/note`] || "";
                     const isPrivate = token.metadata[`${ID}/private`] === true;
 
-                    status.innerText = token.text?.plainText || "Token Selected";
+                    status.innerText = token.text?.plainText || token.name || "Token Selected";
                     input.value = url;
                     notesArea.value = note;
                     if (isGM) privateCheck.checked = isPrivate;

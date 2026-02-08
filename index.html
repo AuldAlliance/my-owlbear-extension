@@ -16,13 +16,15 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
         
-        /* Tab Styling */
-        .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+        /* Tab Navigation Styling */
+        .tabs { display: flex; gap: 4px; margin-bottom: 8px; flex-shrink: 0; }
         .tab-btn { 
-            flex: 1; padding: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+            flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
             color: #888; cursor: pointer; font-size: 10px; font-weight: bold; border-radius: 4px 4px 0 0;
+            transition: all 0.2s ease;
         }
         .tab-btn.active-tab { background: rgba(255,255,255,0.1); color: white; border-bottom: 2px solid #2196F3; }
+        .tab-btn:hover:not(.active-tab) { background: rgba(255,255,255,0.08); color: #bbb; }
 
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
         #gmTools { display: none; flex-direction: column; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.2); }
@@ -49,7 +51,7 @@
         .active { visibility: visible; }
 
         iframe { background: white; width: 100%; height: 100%; }
-        #notesArea { padding: 10px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; }
+        #notesArea { padding: 12px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; line-height: 1.4; }
         .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
         .icon-large { font-size: 30px; opacity: 0.3; }
         .error-btn { margin-top: 10px; padding: 8px 15px; background: #2196F3; color: white; border-radius: 4px; font-size: 10px; font-weight: bold; }
@@ -120,7 +122,7 @@
             const contentArea = document.getElementById('contentArea');
             
             let loadTimeout;
-            let currentTab = 'url'; // Track which tab is active
+            let currentTab = 'url'; 
 
             gmTools.style.display = "flex";
             if (!isGM) document.querySelector('.eye-container').style.display = "none";
@@ -131,13 +133,14 @@
                 });
             };
 
-            // Tab Switching Logic
             const switchTab = (tab) => {
                 currentTab = tab;
                 document.getElementById('tabUrl').classList.toggle('active-tab', tab === 'url');
                 document.getElementById('tabNotes').classList.toggle('active-tab', tab === 'notes');
                 
-                // Only switch if we actually have a token selected
+                // Toggle GM input field visibility based on tab for a cleaner look
+                input.style.display = tab === 'url' ? 'block' : 'none';
+
                 const tokenId = localStorage.getItem(STORAGE_KEY);
                 if (tokenId) {
                     if (tab === 'notes') {
@@ -172,21 +175,27 @@
             const updateIframe = (url) => {
                 if (!url) return;
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                showLayer('statsFrame');
-                clearTimeout(loadTimeout);
-                loadTimeout = setTimeout(() => {
-                    if(document.getElementById('statsFrame').classList.contains('active')) {
-                        showLayer('errorMsg');
-                    }
-                }, 3000);
-                statsFrame.src = fullUrl;
+                if (statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
+                    showLayer('statsFrame');
+                    clearTimeout(loadTimeout);
+                    loadTimeout = setTimeout(() => {
+                        if(document.getElementById('statsFrame').classList.contains('active')) {
+                            showLayer('errorMsg');
+                        }
+                    }, 3000);
+                    statsFrame.src = fullUrl;
+                }
             };
 
             statsFrame.onload = () => clearTimeout(loadTimeout);
 
             const syncView = async (selection) => {
                 let tokenId = (selection?.length > 0) ? selection[0] : localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) { status.innerText = "Ready"; return showLayer('noSelectionMsg'); }
+                if (!tokenId) { 
+                    status.innerText = "Ready"; 
+                    localStorage.removeItem(STORAGE_KEY);
+                    return showLayer('noSelectionMsg'); 
+                }
 
                 const items = await OBR.scene.items.getItems([tokenId]);
                 const token = items[0];
@@ -208,15 +217,13 @@
                     }
                     gmTools.style.visibility = "visible";
 
-                    // Apply the current tab view
                     if (currentTab === 'notes') {
                         showLayer('notesArea');
                     } else if (url) {
                         updateIframe(url);
                     } else {
-                        showLayer('notesArea'); // Fallback if no URL
+                        showLayer('notesArea');
                     }
-
                 } else {
                     localStorage.removeItem(STORAGE_KEY);
                     status.innerText = "Ready";
@@ -239,23 +246,31 @@
                         if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
-                OBR.notification.show("Saved!");
+                OBR.notification.show("Saved All Data!");
             };
 
             clearBtn.onclick = async () => {
                 const currentSelection = await OBR.player.getSelection();
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return;
+
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        item.metadata[`${ID}/url`] = "";
-                        item.metadata[`${ID}/note`] = "";
-                        if (isGM) item.metadata[`${ID}/private`] = false;
+                        if (currentTab === 'url') {
+                            item.metadata[`${ID}/url`] = "";
+                            input.value = "";
+                        } else {
+                            item.metadata[`${ID}/note`] = "";
+                            notesArea.value = "";
+                        }
+                        // Reset privacy ONLY if both are now empty
+                        if (!item.metadata[`${ID}/url`] && !item.metadata[`${ID}/note`]) {
+                            if (isGM) item.metadata[`${ID}/private`] = false;
+                        }
                     }
                 });
-                input.value = "";
-                notesArea.value = "";
-                OBR.notification.show("Cleared!");
+                OBR.notification.show(`Cleared ${currentTab === 'url' ? 'URL' : 'Notes'}`);
+                syncView([tokenId]);
             };
 
             syncView(await OBR.player.getSelection());

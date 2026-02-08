@@ -5,71 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Token Stats & Notes</title>
     <style>
-        /* ROOT TRANSPARENCY */
         html { background: transparent !important; }
-
         body { 
             background: rgba(32, 33, 36, 0.9) !important; 
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            color: white; 
-            font-family: sans-serif; 
-            padding: 12px; 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            box-sizing: border-box; 
-            overflow: hidden;
+            color: white; font-family: sans-serif; padding: 12px; margin: 0; 
+            display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden;
         }
-
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
-
         .controls { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 12px; }
-        
-        #gmTools { 
-            display: none; 
-            flex-direction: column; 
-            gap: 8px; 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            padding: 8px; 
-            border-radius: 6px; 
-            background: rgba(0, 0, 0, 0.2); 
-        }
-        
+        #gmTools { display: none; flex-direction: column; gap: 8px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.2); }
         .gm-action-row { display: flex; align-items: center; gap: 8px; }
 
-        /* PRIVACY TOGGLE */
         .eye-container { position: relative; width: 34px; height: 28px; flex-shrink: 0; }
-        #privateCheck { 
-            position: absolute; opacity: 0; width: 100%; height: 100%; 
-            cursor: pointer; z-index: 2; margin: 0;
-        }
-        .eye-button {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none;
-        }
+        #privateCheck { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; margin: 0; }
+        .eye-button { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
         .eye-button svg { width: 16px; height: 16px; fill: #bbb; }
         #privateCheck:checked + .eye-button { border-color: #f28b82; background: rgba(242, 139, 130, 0.1); }
         #privateCheck:checked + .eye-button svg { fill: #f28b82; }
         #privateCheck:checked + .eye-button .eye-open { display: none; }
         #privateCheck:not(:checked) + .eye-button .eye-closed { display: none; }
 
-        /* BUTTONS */
-        button { cursor: pointer; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 10px; color: white; border: none; transition: opacity 0.2s; }
-        button:hover { opacity: 0.8; }
+        button { cursor: pointer; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 10px; color: white; border: none; transition: background 0.2s; }
         #saveBtn { flex: 2; height: 26px; background: #2196F3; }
         #clearBtn { flex: 1; height: 26px; background: #f44336; }
-        #popoutBtn { width: 32px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
+        #popoutBtn { width: 34px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
+        #popoutBtn:hover { background: rgba(255,255,255,0.2); }
 
         input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; }
         
-        /* CONTENT LAYERS */
         #contentArea { flex-grow: 1; position: relative; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; background: rgba(0,0,0,0.2); overflow: hidden; }
         .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
         .active { visibility: visible; }
@@ -78,7 +44,7 @@
         #notesArea { padding: 10px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; }
         .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
         .icon-large { font-size: 30px; opacity: 0.3; }
-        .error-text { color: #f28b82; font-weight: bold; font-style: normal; font-size: 12px; margin-top: 5px; }
+        .error-btn { margin-top: 10px; padding: 8px 15px; background: #2196F3; color: white; border-radius: 4px; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -97,8 +63,8 @@
                 </div>
                 <button id="saveBtn">Save</button>
                 <button id="clearBtn">Clear</button>
-                <button id="popoutBtn" title="Open in Floating Window">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                <button id="popoutBtn" title="Open Floating Window">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </button>
             </div>
         </div>
@@ -114,11 +80,9 @@
         </div>
         <div id="errorMsg" class="layer placeholder">
             <div class="icon-large">⚠️</div>
-            <div class="error-text">Site Refused to Connect</div>
-            <div style="font-size: 10px; margin-top: 5px; opacity: 0.8;">
-                The site blocks being shown in a frame.<br>
-                Try the <b>Floating Window</b> button above.
-            </div>
+            <div style="color: #f28b82; font-weight: bold;">Frame Support Restricted</div>
+            <div style="font-size: 10px; margin-top: 5px; opacity: 0.8;">News and official D&D sites must be opened in a separate window.</div>
+            <button id="errorPopBtn" class="error-btn">OPEN FLOATING WINDOW</button>
         </div>
     </div>
 
@@ -130,12 +94,12 @@
         OBR.onReady(async () => {
             const role = await OBR.player.getRole();
             const isGM = role === "GM";
-            
             const gmTools = document.getElementById('gmTools');
             const status = document.getElementById('status');
             const saveBtn = document.getElementById('saveBtn');
             const clearBtn = document.getElementById('clearBtn');
             const popoutBtn = document.getElementById('popoutBtn');
+            const errorPopBtn = document.getElementById('errorPopBtn');
             const input = document.getElementById('urlInput');
             const privateCheck = document.getElementById('privateCheck');
             const statsFrame = document.getElementById('statsFrame');
@@ -153,47 +117,37 @@
                 });
             };
 
+            const openFloatingWindow = () => {
+                const url = input.value.trim();
+                if (!url) return;
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                const w = contentArea.offsetWidth || 600;
+                const h = contentArea.offsetHeight || 800;
+                const features = `width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
+                
+                const popup = window.open(fullUrl, "TokenStatsPopup", features);
+                
+                if (!popup || popup.closed || typeof popup.closed == 'undefined') {
+                    OBR.notification.show("Popup blocked. Please 'Allow Popups' in your browser bar.");
+                }
+            };
+
+            popoutBtn.onclick = openFloatingWindow;
+            errorPopBtn.onclick = openFloatingWindow;
+
             const updateIframe = (url) => {
                 if (!url) return;
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
                 if (statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
                     showLayer('statsFrame');
                     clearTimeout(loadTimeout);
-                    loadTimeout = setTimeout(() => showLayer('errorMsg'), 3500);
+                    loadTimeout = setTimeout(() => showLayer('errorMsg'), 3000);
                     statsFrame.src = fullUrl;
                 }
             };
 
             statsFrame.onload = () => clearTimeout(loadTimeout);
-            
-// pop out window code
-popoutBtn.onclick = () => {
-    const url = input.value.trim();
-    if (url) {
-        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-        
-        // 1. Get the exact size of your Owlbear extension window
-        const w = window.innerWidth;
-        const h = window.innerHeight;
 
-        // 2. Get the absolute position of the extension on your monitor
-        // screenLeft/Top gives us the exact coordinates of the iframe's viewport
-        const left = window.screenLeft || window.screenX;
-        const top = window.screenTop || window.screenY;
-
-        // 3. Construct the feature string (no spaces allowed)
-        // We use 'popup=1' to force a window instead of a tab
-        const features = `left=${left},top=${top},width=${w},height=${h},popup=1,menubar=no,toolbar=no,location=no,status=no,resizable=yes`;
-
-        const newWin = window.open(fullUrl, "_blank", features);
-        
-        if (newWin) {
-            newWin.focus();
-        } else {
-            OBR.notification.show("Pop-up blocked!");
-        }
-    }
-};
             const updateInputStates = () => {
                 const hasUrl = input.value.trim().length > 0;
                 const hasNotes = notesArea.value.trim().length > 0;
@@ -205,10 +159,7 @@ popoutBtn.onclick = () => {
 
             const syncView = async (selection) => {
                 let tokenId = (selection?.length > 0) ? selection[0] : localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) {
-                    status.innerText = "Ready";
-                    return showLayer('noSelectionMsg');
-                }
+                if (!tokenId) { status.innerText = "Ready"; return showLayer('noSelectionMsg'); }
 
                 const items = await OBR.scene.items.getItems([tokenId]);
                 const token = items[0];
@@ -227,18 +178,11 @@ popoutBtn.onclick = () => {
                     if (isPrivate && !isGM) {
                         gmTools.style.visibility = "hidden";
                         return showLayer('secretMsg');
-                    } else {
-                        gmTools.style.visibility = "visible";
                     }
-
+                    gmTools.style.visibility = "visible";
                     updateInputStates();
 
-                    if (url) {
-                        updateIframe(url);
-                        showLayer('statsFrame');
-                    } else {
-                        showLayer('notesArea');
-                    }
+                    if (url) { updateIframe(url); } else { showLayer('notesArea'); }
                 } else {
                     localStorage.removeItem(STORAGE_KEY);
                     status.innerText = "Ready";
@@ -248,7 +192,6 @@ popoutBtn.onclick = () => {
 
             notesArea.oninput = updateInputStates;
             input.oninput = updateInputStates;
-
             OBR.player.onChange((p) => { if (p.selection) syncView(p.selection); });
             OBR.scene.items.onChange(async () => syncView(await OBR.player.getSelection()));
 
@@ -258,10 +201,6 @@ popoutBtn.onclick = () => {
                 if (!tokenId) return OBR.notification.show("Select a token first!");
 
                 let url = input.value.trim();
-                if (url && url.includes("bestiary.html#")) {
-                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
-                }
-
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
                         item.metadata[`${ID}/url`] = url;
@@ -276,7 +215,6 @@ popoutBtn.onclick = () => {
                 const currentSelection = await OBR.player.getSelection();
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return;
-
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
                         item.metadata[`${ID}/url`] = "";

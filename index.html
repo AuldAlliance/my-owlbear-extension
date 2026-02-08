@@ -167,17 +167,23 @@
             statsFrame.onload = () => clearTimeout(loadTimeout);
 
             // FLOATING WINDOW LOGIC
-            popoutBtn.onclick = () => {
-                const url = input.value.trim();
-                if (url) {
-                    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                    // Use the extension's current size for the popup
-                    const w = contentArea.offsetWidth || 600;
-                    const h = contentArea.offsetHeight || 800;
-                    const features = `width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
-                    window.open(fullUrl, "TokenStatsPopup", features);
-                }
-            };
+        popoutBtn.onclick = () => {
+        const url = input.value.trim();
+        if (url) {
+            const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+            
+            // Use the extension's current size for the popup
+            const w = contentArea.offsetWidth || 600;
+            const h = contentArea.offsetHeight || 800;
+
+            // Calculate the position to center the window
+            const left = (window.screen.width / 2) - (w / 2);
+            const top = (window.screen.height / 2) - (h / 2);
+
+            const features = `width=${w},height=${h},top=${top},left=${left},menubar=no,toolbar=no,location=no,status=no`;
+            window.open(fullUrl, "TokenStatsPopup", features);
+        }
+    };
 
             const updateInputStates = () => {
                 const hasUrl = input.value.trim().length > 0;

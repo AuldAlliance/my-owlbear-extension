@@ -166,24 +166,33 @@
 
             statsFrame.onload = () => clearTimeout(loadTimeout);
 
-            // FLOATING WINDOW LOGIC
-        popoutBtn.onclick = () => {
-        const url = input.value.trim();
-        if (url) {
-            const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-            
-            // Use the extension's current size for the popup
-            const w = contentArea.offsetWidth || 600;
-            const h = contentArea.offsetHeight || 800;
+// FLOATING WINDOW LOGIC
+popoutBtn.onclick = () => {
+    const url = input.value.trim();
+    if (url) {
+        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+        
+        // Get the position of the current browser window relative to the screen
+        const screenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX;
+        const screenTop = window.screenTop !== undefined ? window.screenTop : window.screenY;
 
-            // Calculate the position to center the window
-            const left = (window.screen.width / 2) - (w / 2);
-            const top = (window.screen.height / 2) - (h / 2);
+        // Get the exact dimensions of the current extension iframe/window
+        const w = window.outerWidth || document.documentElement.clientWidth;
+        const h = window.outerHeight || document.documentElement.clientHeight;
 
-            const features = `width=${w},height=${h},top=${top},left=${left},menubar=no,toolbar=no,location=no,status=no`;
-            window.open(fullUrl, "TokenStatsPopup", features);
-        }
-    };
+        // Calculate the absolute coordinates on the monitor
+        const left = screenLeft;
+        const top = screenTop;
+
+        const features = `width=${w},height=${h},top=${top},left=${left},menubar=no,toolbar=no,location=no,status=no,resizable=yes`;
+        
+        // Open the window
+        const newWin = window.open(fullUrl, "TokenStatsPopup", features);
+        
+        // Focus the window in case it opened behind
+        if (newWin) newWin.focus();
+    }
+};
 
             const updateInputStates = () => {
                 const hasUrl = input.value.trim().length > 0;

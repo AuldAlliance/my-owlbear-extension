@@ -174,19 +174,24 @@
             document.getElementById('tabUrl').onclick = () => switchTab('url');
             document.getElementById('tabNotes').onclick = () => switchTab('notes');
 
-          const openFloatingWindow = () => {
+         const openFloatingWindow = () => {
     const url = input.value.trim();
     if (!url) return;
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-    
+
+    // Get the position of the content inside the extension
     const rect = contentArea.getBoundingClientRect();
-    
-    // Attempt to get the actual window coordinates
+
+    /**
+     * Logic:
+     * 1. window.screenX/Y = Position of the Extension window on your monitor.
+     * 2. rect.left/top = Position of the iframe content inside that window.
+     * 3. Math.max handles cases where screenX might be 0 but the window is actually open.
+     */
     let left = window.screenX + rect.left;
     let top = window.screenY + rect.top;
 
-    // IF the browser is lying and saying 0,0 (sandboxed), 
-    // we use the screen center instead of the top-left corner.
+    // Fallback: If the browser is sandboxed (reporting 0,0), center it on the screen instead.
     if (window.screenX === 0 && window.screenY === 0) {
         left = (screen.width / 2) - (rect.width / 2);
         top = (screen.height / 2) - (rect.height / 2);
@@ -195,14 +200,13 @@
     const w = rect.width || 600;
     const h = rect.height || 800;
 
-    // We MUST include 'width' and 'height' inside the features string 
-    // for 'left' and 'top' to be respected by many browsers.
     const features = `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`;
     
+    // We use '_blank' to ensure the browser calculates a fresh position every time
     const popup = window.open(fullUrl, "_blank", features);
 
     if (!popup || popup.closed) {
-        OBR.notification.show("Popup blocked.");
+        OBR.notification.show("Popup blocked. Please check browser settings.");
     }
 };
 

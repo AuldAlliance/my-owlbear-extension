@@ -179,8 +179,8 @@
                 if (!url) return;
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
                 const rect = contentArea.getBoundingClientRect();
-                const left = window.screenX + rect.left;
-                const top = window.screenY + rect.top;
+                const left = window.screenX + 2*rect.left;
+                const top = window.screenY + 2*rect.top;
                 const w = rect.width || 600;
                 const h = rect.height || 800;
                 const features = `left=${left},top=${top},width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;

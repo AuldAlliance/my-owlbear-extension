@@ -174,19 +174,33 @@
             document.getElementById('tabUrl').onclick = () => switchTab('url');
             document.getElementById('tabNotes').onclick = () => switchTab('notes');
 
-            const openFloatingWindow = () => {
-                const url = input.value.trim();
-                if (!url) return;
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                const rect = contentArea.getBoundingClientRect();
-                const left = window.screenX + 2*rect.left;
-                const top = window.screenY + 2*rect.top;
-                const w = rect.width || 600;
-                const h = rect.height || 800;
-                const features = `left=${left},top=${top},width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
-                const popup = window.open(fullUrl, "TokenStatsPopup", features);
-                if (!popup || popup.closed) OBR.notification.show("Popup blocked.");
-            };
+          const openFloatingWindow = () => {
+    const url = input.value.trim();
+    if (!url) return;
+    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+    
+    // 1. Get the iframe's position relative to the extension window
+    const rect = contentArea.getBoundingClientRect();
+    
+    // 2. Calculate screen position
+    // window.screenX is the left edge of the undocked window
+    // rect.left is the distance from that edge to the iframe
+    const left = window.screenX + rect.left;
+    
+    // We add an estimated 30px to 'top' to account for the window's title bar/drag handle
+    const top = window.screenY + rect.top + 30;
+
+    const w = rect.width || 600;
+    const h = rect.height || 800;
+
+    const features = `left=${left},top=${top},width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
+    
+    const popup = window.open(fullUrl, "TokenStatsPopup", features);
+
+    if (!popup || popup.closed) {
+        OBR.notification.show("Popup blocked. Please allow popups for Owlbear Rodeo.");
+    }
+};
 
             popoutBtn.onclick = openFloatingWindow;
             errorPopBtn.onclick = openFloatingWindow;

@@ -179,26 +179,30 @@
     if (!url) return;
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
     
-    // 1. Get the iframe's position relative to the extension window
     const rect = contentArea.getBoundingClientRect();
     
-    // 2. Calculate screen position
-    // window.screenX is the left edge of the undocked window
-    // rect.left is the distance from that edge to the iframe
-    const left = window.screenX + rect.left;
-    
-    // We add an estimated 30px to 'top' to account for the window's title bar/drag handle
-    const top = window.screenY + rect.top + 30;
+    // Attempt to get the actual window coordinates
+    let left = window.screenX + rect.left;
+    let top = window.screenY + rect.top;
+
+    // IF the browser is lying and saying 0,0 (sandboxed), 
+    // we use the screen center instead of the top-left corner.
+    if (window.screenX === 0 && window.screenY === 0) {
+        left = (screen.width / 2) - (rect.width / 2);
+        top = (screen.height / 2) - (rect.height / 2);
+    }
 
     const w = rect.width || 600;
     const h = rect.height || 800;
 
-    const features = `left=${left},top=${top},width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`;
+    // We MUST include 'width' and 'height' inside the features string 
+    // for 'left' and 'top' to be respected by many browsers.
+    const features = `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`;
     
-    const popup = window.open(fullUrl, "TokenStatsPopup", features);
+    const popup = window.open(fullUrl, "_blank", features);
 
     if (!popup || popup.closed) {
-        OBR.notification.show("Popup blocked. Please allow popups for Owlbear Rodeo.");
+        OBR.notification.show("Popup blocked.");
     }
 };
 

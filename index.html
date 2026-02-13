@@ -262,14 +262,6 @@
                 const currentSelection = await OBR.player.getSelection();
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return OBR.notification.show("Select a token first!");
-                
-                await OBR.scene.items.updateItems([tokenId], (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/url`] = input.value.trim();
-                        item.metadata[`${ID}/note`] = notesArea.value;
-                        if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
-                    }
-                });
 
                 let url = input.value.trim();
                 // 5e.tools Bestiary link helper
@@ -277,8 +269,15 @@
                     url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
                 }
                 
+                await OBR.scene.items.updateItems([tokenId], (items) => {
+                    for (let item of items) {
+                        item.metadata[`${ID}/url`] = url;//input.value.trim();
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                        if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
+                    }
+                });
+                
                 OBR.notification.show("Saved!");
-                syncView([tokenId]);
             };
 
             clearBtn.onclick = async () => {

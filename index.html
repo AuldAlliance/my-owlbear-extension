@@ -262,12 +262,6 @@
                 const currentSelection = await OBR.player.getSelection();
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return OBR.notification.show("Select a token first!");
-
-                let url = input.value.trim();
-                // 5e.tools Bestiary link helper
-                if (url.includes("bestiary.html#")) {
-                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
-                }
                 
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
@@ -276,7 +270,15 @@
                         if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
+
+                let url = input.value.trim();
+                // 5e.tools Bestiary link helper
+                if (url.includes("bestiary.html#")) {
+                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                }
+                
                 OBR.notification.show("Saved!");
+                syncView([tokenId]);
             };
 
             clearBtn.onclick = async () => {

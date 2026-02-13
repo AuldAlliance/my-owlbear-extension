@@ -268,6 +268,8 @@
                 if (url.includes("bestiary.html#")) {
                     url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
                 }
+
+                OBR.notification.show(url);
                 
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {

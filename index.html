@@ -43,7 +43,6 @@
         #popoutBtn { width: 34px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
 
         #shareHandoutBtn { background: #4caf50; height: 26px; padding: 0 8px; display: none; }
-        #shareHandoutBtn.sharing { background: #ff9800; }
 
         input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; }
         
@@ -129,7 +128,7 @@
             const statsFrame = document.getElementById('statsFrame');
             const notesArea = document.getElementById('notesArea');
             const handoutImg = document.getElementById('handoutImg');
-            const contentArea = document.getElementById('contentArea');
+            const handoutLayer = document.getElementById('handoutLayer');
             
             let loadTimeout;
             let currentTab = 'url'; 
@@ -159,7 +158,6 @@
                 }
             };
 
-            // POP OUT LOGIC
             const openFloatingWindow = (urlOverride) => {
                 const url = urlOverride || input.value.trim();
                 if (!url) return;
@@ -171,7 +169,6 @@
                 window.open(fullUrl, "_blank", features);
             };
 
-            // BROADCAST LISTENER (Players listen for GM's "Share")
             OBR.broadcast.onMessage(BROADCAST_ID, (event) => {
                 if (event.data && event.data.url) {
                     OBR.notification.show("GM Shared a Handout");
@@ -179,7 +176,7 @@
                 }
             });
 
-            const switchTab = (tab) => {
+            const switchTab = async (tab) => {
                 currentTab = tab;
                 document.getElementById('tabUrl').classList.toggle('active-tab', tab === 'url');
                 document.getElementById('tabNotes').classList.toggle('active-tab', tab === 'notes');
@@ -188,8 +185,8 @@
                 input.placeholder = tab === 'handout' ? "Handout Image URL" : "URL (Stats or Image)";
                 shareHandoutBtn.style.display = (isGM && tab === 'handout') ? "block" : "none";
 
-                const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (tokenId) syncView([tokenId]);
+                const selection = await OBR.player.getSelection();
+                syncView(selection);
             };
 
             document.getElementById('tabUrl').onclick = () => switchTab('url');
@@ -218,16 +215,14 @@
                     const isPrivate = token.metadata[`${ID}/private`] ?? true;
 
                     status.innerText = token.text?.plainText || "";                    
+                    
                     if (currentTab === 'url') input.value = url;
-                    else if (currentTab === 'notes') notesArea.value = note;
                     else if (currentTab === 'handout') input.value = handout;
+                    
+                    notesArea.value = note; // Load notes always so they don't vanish
 
-                    if (isGM) {
-                        privateCheck.checked = isPrivate;
-                    }
+                    if (isGM) privateCheck.checked = isPrivate;
 
-                    // For players, if private, they can only see Handout tab if there is a URL there.
-                    // (They still get the "Force Pop" if the GM clicks Share)
                     if (!isGM && isPrivate) {
                         if (currentTab === 'handout' && handout) {
                             handoutImg.src = handout;
@@ -246,7 +241,9 @@
                             handoutImg.src = handout;
                             showLayer('handoutLayer');
                         } else {
-                            showLayer('notesArea');
+                            // Empty handout state
+                            handoutImg.src = "";
+                            showLayer('handoutLayer');
                         }
                     } else if (url) {
                         updateIframe(url, false);
@@ -266,21 +263,20 @@
 
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
+                        // Logic: Update the metadata for the specific active tab, keep others
                         if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value.trim();
-                        if (currentTab === 'notes') item.metadata[`['${ID}/note']`] = notesArea.value;
+                        if (currentTab === 'notes') item.metadata[`${ID}/note`] = notesArea.value;
                         if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value.trim();
+                        
                         if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
                 OBR.notification.show("Saved!");
             };
 
-            // GM CLICK SHARE: BROADCAST TO EVERYONE
             shareHandoutBtn.onclick = async () => {
                 const imgUrl = input.value.trim();
                 if (!imgUrl) return OBR.notification.show("No image URL to share!");
-                
-                // Broadcast to all players (and self)
                 OBR.broadcast.sendMessage(BROADCAST_ID, { url: imgUrl });
                 OBR.notification.show("Handout pushed to players!");
             };
@@ -292,11 +288,11 @@
 
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        const metaKey = currentTab === 'url' ? 'url' : (currentTab === 'handout' ? 'handout' : 'note');
-                        item.metadata[`${ID}/${metaKey}`] = "";
+                        if (currentTab === 'url') { item.metadata[`${ID}/url`] = ""; input.value = ""; }
+                        if (currentTab === 'handout') { item.metadata[`${ID}/handout`] = ""; input.value = ""; handoutImg.src = ""; }
+                        if (currentTab === 'notes') { item.metadata[`${ID}/note`] = ""; notesArea.value = ""; }
                     }
                 });
-                input.value = "";
                 syncView([tokenId]);
             };
 

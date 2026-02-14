@@ -34,14 +34,11 @@
         .eye-button svg { width: 16px; height: 16px; fill: #bbb; }
         #privateCheck:checked + .eye-button { border-color: #f28b82; background: rgba(242, 139, 130, 0.1); }
         #privateCheck:checked + .eye-button svg { fill: #f28b82; }
-        #privateCheck:checked + .eye-button .eye-open { display: none; }
-        #privateCheck:not(:checked) + .eye-button .eye-closed { display: none; }
 
         button { cursor: pointer; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 10px; color: white; border: none; transition: background 0.2s; }
         #saveBtn { flex: 2; height: 26px; background: #2196F3; }
         #clearBtn { flex: 1; height: 26px; background: #f44336; }
         #popoutBtn { width: 34px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
-
         #shareHandoutBtn { background: #4caf50; height: 26px; padding: 0 8px; display: none; }
 
         input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; }
@@ -50,15 +47,10 @@
         .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
         .active { visibility: visible; }
 
-        iframe { background: white; width: 100%; height: 100%; }
         #notesArea { padding: 12px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; line-height: 1.4; }
-        
         #handoutLayer { display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; }
         #handoutImg { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
-
         .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
-        .icon-large { font-size: 30px; opacity: 0.3; }
-        .error-btn { margin-top: 10px; padding: 8px 15px; background: #2196F3; color: white; border-radius: 4px; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -72,19 +64,18 @@
     
     <div class="controls">
         <div id="gmTools">
-            <input type="text" id="urlInput" placeholder="URL (Stats or Image)">
-            <div class="gm-action-row">
+            <input type="text" id="urlInput" placeholder="URL">
+            <div id="controlRow" class="gm-action-row">
                 <div class="eye-container" title="Toggle Private/Public">
                     <input type="checkbox" id="privateCheck" checked>
                     <div class="eye-button">
                         <svg class="eye-open" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                        <svg class="eye-closed" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.74-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z"/></svg>
                     </div>
                 </div>
                 <button id="saveBtn">Save</button>
                 <button id="shareHandoutBtn" title="Push image to all players">Share</button>
                 <button id="clearBtn">Clear</button>
-                <button id="popoutBtn" title="Open Floating Window">
+                <button id="popoutBtn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </button>
             </div>
@@ -92,19 +83,11 @@
     </div>
 
     <div id="contentArea">
-        <iframe id="statsFrame" class="layer"></iframe>
+        <iframe id="statsFrame" class="layer" style="background:white; width:100%; height:100%;"></iframe>
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
         <div id="handoutLayer" class="layer"><img id="handoutImg" src="" alt="Handout"></div>
         <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
-        <div id="secretMsg" class="layer placeholder">
-            <div class="icon-large">🔒</div>
-            <div>Information hidden by GM</div>
-        </div>
-        <div id="errorMsg" class="layer placeholder">
-            <div class="icon-large">⚠️</div>
-            <div style="color: #f28b82; font-weight: bold;">Frame Support Restricted</div>
-            <button id="errorPopBtn" class="error-btn">OPEN FLOATING WINDOW</button>
-        </div>
+        <div id="secretMsg" class="layer placeholder">🔒 Hidden by GM</div>
     </div>
 
     <script type="module">
@@ -116,187 +99,132 @@
         OBR.onReady(async () => {
             const role = await OBR.player.getRole();
             const isGM = role === "GM";
-            const gmTools = document.getElementById('gmTools');
-            const status = document.getElementById('status');
-            const saveBtn = document.getElementById('saveBtn');
-            const clearBtn = document.getElementById('clearBtn');
-            const popoutBtn = document.getElementById('popoutBtn');
-            const errorPopBtn = document.getElementById('errorPopBtn');
-            const shareHandoutBtn = document.getElementById('shareHandoutBtn');
             const input = document.getElementById('urlInput');
-            const privateCheck = document.getElementById('privateCheck');
-            const statsFrame = document.getElementById('statsFrame');
+            const controlRow = document.getElementById('controlRow');
             const notesArea = document.getElementById('notesArea');
             const handoutImg = document.getElementById('handoutImg');
-            const handoutLayer = document.getElementById('handoutLayer');
+            const gmTools = document.getElementById('gmTools');
+            const shareHandoutBtn = document.getElementById('shareHandoutBtn');
+            const privateCheck = document.getElementById('privateCheck');
+            const saveBtn = document.getElementById('saveBtn');
             
-            let loadTimeout;
-            let currentTab = 'url'; 
+            let currentTab = 'url';
+            let currentMetadata = {};
 
             gmTools.style.display = "flex";
-            if (!isGM) document.querySelector('.eye-container').style.display = "none";
 
-            const showLayer = (activeId) => {
-                ['statsFrame', 'notesArea', 'handoutLayer', 'noSelectionMsg', 'secretMsg', 'errorMsg'].forEach(id => {
-                    document.getElementById(id).classList.toggle('active', id === activeId);
+            const switchTab = (tab) => {
+                if (currentTab === 'url') currentMetadata.url = input.value;
+                if (currentTab === 'handout') currentMetadata.handout = input.value;
+                currentMetadata.note = notesArea.value;
+
+                currentTab = tab;
+
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+                document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active-tab');
+
+                // UI Visibility logic
+                const isNotes = tab === 'notes';
+                input.style.display = isNotes ? "none" : "block";
+                controlRow.style.display = isNotes ? "none" : "flex"; // Hides popout, save, clear, share
+                
+                shareHandoutBtn.style.display = (isGM && tab === 'handout') ? "block" : "none";
+
+                if (tab === 'url') input.value = currentMetadata.url || "";
+                if (tab === 'handout') input.value = currentMetadata.handout || "";
+                
+                refreshUI();
+            };
+
+            const refreshUI = () => {
+                const isPrivate = currentMetadata.private ?? true;
+                const url = currentMetadata.url || "";
+                const handout = currentMetadata.handout || "";
+
+                if (!isGM && isPrivate && currentTab !== 'handout') {
+                    gmTools.style.visibility = "hidden";
+                    return showLayer('secretMsg');
+                }
+
+                gmTools.style.visibility = "visible";
+                if (currentTab === 'notes') showLayer('notesArea');
+                else if (currentTab === 'handout') {
+                    handoutImg.src = handout;
+                    showLayer('handoutLayer');
+                } else if (url) {
+                    document.getElementById('statsFrame').src = url.startsWith('http') ? url : `https://${url}`;
+                    showLayer('statsFrame');
+                } else showLayer('notesArea');
+            };
+
+            const showLayer = (id) => {
+                ['statsFrame', 'notesArea', 'handoutLayer', 'noSelectionMsg', 'secretMsg'].forEach(l => {
+                    document.getElementById(l).classList.toggle('active', l === id);
                 });
             };
 
-            const updateIframe = (url, force = false) => {
-                if (!url) return;
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                if (force || statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
-                    showLayer('statsFrame');
-                    clearTimeout(loadTimeout);
-                    if (force) statsFrame.src = "about:blank";
-                    loadTimeout = setTimeout(() => {
-                        if(document.getElementById('statsFrame').classList.contains('active')) showLayer('errorMsg');
-                    }, 3500);
-                    statsFrame.src = fullUrl;
-                } else {
-                    showLayer('statsFrame');
+            const syncFromToken = async (selection) => {
+                let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
+                if (!tokenId) return showLayer('noSelectionMsg');
+
+                const items = await OBR.scene.items.getItems([tokenId]);
+                const token = items[0];
+                if (token) {
+                    localStorage.setItem(STORAGE_KEY, tokenId);
+                    currentMetadata = {
+                        url: token.metadata[`${ID}/url`] || "",
+                        note: token.metadata[`${ID}/note`] || "",
+                        handout: token.metadata[`${ID}/handout`] || "",
+                        private: token.metadata[`${ID}/private`] ?? true
+                    };
+                    if (document.activeElement !== input) {
+                        if (currentTab === 'url') input.value = currentMetadata.url;
+                        if (currentTab === 'handout') input.value = currentMetadata.handout;
+                    }
+                    if (document.activeElement !== notesArea) notesArea.value = currentMetadata.note;
+                    privateCheck.checked = currentMetadata.private;
+                    refreshUI();
                 }
             };
 
-            const openFloatingWindow = (urlOverride) => {
-                const url = urlOverride || input.value.trim();
-                if (!url) return;
-                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                const w = 600, h = 700;
-                const left = (screen.width / 2) - (w / 2);
-                const top = (screen.height / 2) - (h / 2);
-                const features = `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`;
-                window.open(fullUrl, "_blank", features);
-            };
-
-            OBR.broadcast.onMessage(BROADCAST_ID, (event) => {
-                if (event.data && event.data.url) {
-                    OBR.notification.show("GM Shared a Handout");
-                    openFloatingWindow(event.data.url);
-                }
-            });
-
-            const switchTab = async (tab) => {
-                currentTab = tab;
-                document.getElementById('tabUrl').classList.toggle('active-tab', tab === 'url');
-                document.getElementById('tabNotes').classList.toggle('active-tab', tab === 'notes');
-                document.getElementById('tabHandout').classList.toggle('active-tab', tab === 'handout');
-                
-                input.placeholder = tab === 'handout' ? "Handout Image URL" : "URL (Stats or Image)";
-                shareHandoutBtn.style.display = (isGM && tab === 'handout') ? "block" : "none";
-
-                const selection = await OBR.player.getSelection();
-                syncView(selection);
+            // Auto-save notes when user clicks out of the text area
+            notesArea.onblur = async () => {
+                const tokenId = localStorage.getItem(STORAGE_KEY);
+                if (!tokenId) return;
+                await OBR.scene.items.updateItems([tokenId], (items) => {
+                    for (let item of items) {
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                    }
+                });
             };
 
             document.getElementById('tabUrl').onclick = () => switchTab('url');
             document.getElementById('tabNotes').onclick = () => switchTab('notes');
             document.getElementById('tabHandout').onclick = () => switchTab('handout');
-
-            popoutBtn.onclick = () => openFloatingWindow();
-            errorPopBtn.onclick = () => openFloatingWindow();
-            statsFrame.onload = () => clearTimeout(loadTimeout);
-
-            const syncView = async (selection) => {
-                let tokenId = (selection?.length > 0) ? selection[0] : localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) { 
-                    status.innerText = "Ready"; 
-                    return showLayer('noSelectionMsg'); 
-                }
-
-                const items = await OBR.scene.items.getItems([tokenId]);
-                const token = items[0];
-                
-                if (token) {
-                    localStorage.setItem(STORAGE_KEY, tokenId);
-                    const url = token.metadata[`${ID}/url`] || "";
-                    const note = token.metadata[`${ID}/note`] || "";
-                    const handout = token.metadata[`${ID}/handout`] || "";
-                    const isPrivate = token.metadata[`${ID}/private`] ?? true;
-
-                    status.innerText = token.text?.plainText || "";                    
-                    
-                    if (currentTab === 'url') input.value = url;
-                    else if (currentTab === 'handout') input.value = handout;
-                    
-                    notesArea.value = note; // Load notes always so they don't vanish
-
-                    if (isGM) privateCheck.checked = isPrivate;
-
-                    if (!isGM && isPrivate) {
-                        if (currentTab === 'handout' && handout) {
-                            handoutImg.src = handout;
-                            return showLayer('handoutLayer');
-                        }
-                        gmTools.style.visibility = "hidden";
-                        return showLayer('secretMsg');
-                    }
-
-                    gmTools.style.visibility = "visible";
-
-                    if (currentTab === 'notes') {
-                        showLayer('notesArea');
-                    } else if (currentTab === 'handout') {
-                        if (handout) {
-                            handoutImg.src = handout;
-                            showLayer('handoutLayer');
-                        } else {
-                            // Empty handout state
-                            handoutImg.src = "";
-                            showLayer('handoutLayer');
-                        }
-                    } else if (url) {
-                        updateIframe(url, false);
-                    } else {
-                        showLayer('notesArea');
-                    }
-                }
+            
+            document.getElementById('popoutBtn').onclick = () => {
+                const url = input.value.trim() || currentMetadata.url;
+                if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
             };
 
-            OBR.player.onChange((p) => { if (p.selection) syncView(p.selection); });
-            OBR.scene.items.onChange(async () => syncView(await OBR.player.getSelection()));
-
             saveBtn.onclick = async () => {
-                const currentSelection = await OBR.player.getSelection();
-                const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
+                const tokenId = localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) return;
-
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        // Logic: Update the metadata for the specific active tab, keep others
-                        if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value.trim();
-                        if (currentTab === 'notes') item.metadata[`${ID}/note`] = notesArea.value;
-                        if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value.trim();
-                        
-                        if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
+                        if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value;
+                        if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value;
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                        item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
                 OBR.notification.show("Saved!");
             };
 
-            shareHandoutBtn.onclick = async () => {
-                const imgUrl = input.value.trim();
-                if (!imgUrl) return OBR.notification.show("No image URL to share!");
-                OBR.broadcast.sendMessage(BROADCAST_ID, { url: imgUrl });
-                OBR.notification.show("Handout pushed to players!");
-            };
-
-            clearBtn.onclick = async () => {
-                const currentSelection = await OBR.player.getSelection();
-                const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) return;
-
-                await OBR.scene.items.updateItems([tokenId], (items) => {
-                    for (let item of items) {
-                        if (currentTab === 'url') { item.metadata[`${ID}/url`] = ""; input.value = ""; }
-                        if (currentTab === 'handout') { item.metadata[`${ID}/handout`] = ""; input.value = ""; handoutImg.src = ""; }
-                        if (currentTab === 'notes') { item.metadata[`${ID}/note`] = ""; notesArea.value = ""; }
-                    }
-                });
-                syncView([tokenId]);
-            };
-
-            syncView(await OBR.player.getSelection());
+            OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
+            shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: input.value });
+            OBR.player.onChange(p => syncFromToken(p.selection));
+            syncFromToken(await OBR.player.getSelection());
         });
     </script>
 </body>

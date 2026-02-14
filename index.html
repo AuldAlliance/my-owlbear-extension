@@ -7,7 +7,7 @@
     <style>
         html { background: transparent !important; }
         body { 
-            background: rgba(32, 33, 36, 0.3) !important; 
+            background: rgba(32, 33, 36, 0.2) !important; 
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             color: white; font-family: sans-serif; padding: 12px; margin: 0; 
@@ -230,7 +230,7 @@
                     const note = token.metadata[`${ID}/note`] || "";
                     const isPrivate = token.metadata[`${ID}/private`] ?? true;
 
-                    status.innerText = token.text?.plainText || token.name || "Token Selected";
+                    status.innerText = token.text?.plainText || "";                    
                     input.value = url;
                     notesArea.value = note;
                     if (isGM) privateCheck.checked = isPrivate;

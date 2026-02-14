@@ -19,7 +19,7 @@
         .tabs { display: flex; gap: 4px; margin-bottom: 8px; flex-shrink: 0; }
         .tab-btn { 
             flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
-            color: #888; cursor: pointer; font-size: 10px; font-weight: bold; border-radius: 4px 4px 0 0;
+            color: #888; cursor: pointer; font-size: 9px; font-weight: bold; border-radius: 4px 4px 0 0;
             transition: all 0.2s ease;
         }
         .tab-btn.active-tab { background: rgba(255,255,255,0.1); color: white; border-bottom: 2px solid #2196F3; }
@@ -42,6 +42,9 @@
         #clearBtn { flex: 1; height: 26px; background: #f44336; }
         #popoutBtn { width: 34px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
 
+        #shareHandoutBtn { background: #4caf50; height: 26px; padding: 0 8px; display: none; }
+        #shareHandoutBtn.sharing { background: #ff9800; }
+
         input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; }
         
         #contentArea { flex-grow: 1; position: relative; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; background: rgba(0,0,0,0.2); overflow: hidden; }
@@ -50,6 +53,10 @@
 
         iframe { background: white; width: 100%; height: 100%; }
         #notesArea { padding: 12px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; line-height: 1.4; }
+        
+        #handoutLayer { display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; }
+        #handoutImg { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
+
         .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
         .icon-large { font-size: 30px; opacity: 0.3; }
         .error-btn { margin-top: 10px; padding: 8px 15px; background: #2196F3; color: white; border-radius: 4px; font-size: 10px; font-weight: bold; }
@@ -61,6 +68,7 @@
     <div class="tabs">
         <button id="tabUrl" class="tab-btn active-tab">URL / STATS</button>
         <button id="tabNotes" class="tab-btn">NOTES</button>
+        <button id="tabHandout" class="tab-btn">HANDOUT</button>
     </div>
     
     <div class="controls">
@@ -75,6 +83,7 @@
                     </div>
                 </div>
                 <button id="saveBtn">Save</button>
+                <button id="shareHandoutBtn" title="Push image to all players">Share</button>
                 <button id="clearBtn">Clear</button>
                 <button id="popoutBtn" title="Open Floating Window">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
@@ -86,6 +95,7 @@
     <div id="contentArea">
         <iframe id="statsFrame" class="layer"></iframe>
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
+        <div id="handoutLayer" class="layer"><img id="handoutImg" src="" alt="Handout"></div>
         <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
         <div id="secretMsg" class="layer placeholder">
             <div class="icon-large">🔒</div>
@@ -94,7 +104,6 @@
         <div id="errorMsg" class="layer placeholder">
             <div class="icon-large">⚠️</div>
             <div style="color: #f28b82; font-weight: bold;">Frame Support Restricted</div>
-            <div style="font-size: 10px; margin-top: 5px; opacity: 0.8;">News and official D&D sites must be opened in a separate window.</div>
             <button id="errorPopBtn" class="error-btn">OPEN FLOATING WINDOW</button>
         </div>
     </div>
@@ -103,6 +112,7 @@
         import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
         const ID = "com.auldalliance.stats-linker";
         const STORAGE_KEY = `${ID}_last_token_id`;
+        const BROADCAST_ID = `${ID}/share_event`;
 
         OBR.onReady(async () => {
             const role = await OBR.player.getRole();
@@ -113,10 +123,12 @@
             const clearBtn = document.getElementById('clearBtn');
             const popoutBtn = document.getElementById('popoutBtn');
             const errorPopBtn = document.getElementById('errorPopBtn');
+            const shareHandoutBtn = document.getElementById('shareHandoutBtn');
             const input = document.getElementById('urlInput');
             const privateCheck = document.getElementById('privateCheck');
             const statsFrame = document.getElementById('statsFrame');
             const notesArea = document.getElementById('notesArea');
+            const handoutImg = document.getElementById('handoutImg');
             const contentArea = document.getElementById('contentArea');
             
             let loadTimeout;
@@ -126,7 +138,7 @@
             if (!isGM) document.querySelector('.eye-container').style.display = "none";
 
             const showLayer = (activeId) => {
-                ['statsFrame', 'notesArea', 'noSelectionMsg', 'secretMsg', 'errorMsg'].forEach(id => {
+                ['statsFrame', 'notesArea', 'handoutLayer', 'noSelectionMsg', 'secretMsg', 'errorMsg'].forEach(id => {
                     document.getElementById(id).classList.toggle('active', id === activeId);
                 });
             };
@@ -134,19 +146,12 @@
             const updateIframe = (url, force = false) => {
                 if (!url) return;
                 const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-                
-                // If it's a different URL or we are forcing a refresh
                 if (force || statsFrame.src.replace(/\/$/, "") !== fullUrl.replace(/\/$/, "")) {
                     showLayer('statsFrame');
                     clearTimeout(loadTimeout);
-                    
-                    // Momentarily clear to trigger a fresh load
                     if (force) statsFrame.src = "about:blank";
-                    
                     loadTimeout = setTimeout(() => {
-                        if(document.getElementById('statsFrame').classList.contains('active')) {
-                            showLayer('errorMsg');
-                        }
+                        if(document.getElementById('statsFrame').classList.contains('active')) showLayer('errorMsg');
                     }, 3500);
                     statsFrame.src = fullUrl;
                 } else {
@@ -154,67 +159,45 @@
                 }
             };
 
+            // POP OUT LOGIC
+            const openFloatingWindow = (urlOverride) => {
+                const url = urlOverride || input.value.trim();
+                if (!url) return;
+                const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+                const w = 600, h = 700;
+                const left = (screen.width / 2) - (w / 2);
+                const top = (screen.height / 2) - (h / 2);
+                const features = `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`;
+                window.open(fullUrl, "_blank", features);
+            };
+
+            // BROADCAST LISTENER (Players listen for GM's "Share")
+            OBR.broadcast.onMessage(BROADCAST_ID, (event) => {
+                if (event.data && event.data.url) {
+                    OBR.notification.show("GM Shared a Handout");
+                    openFloatingWindow(event.data.url);
+                }
+            });
+
             const switchTab = (tab) => {
                 currentTab = tab;
                 document.getElementById('tabUrl').classList.toggle('active-tab', tab === 'url');
                 document.getElementById('tabNotes').classList.toggle('active-tab', tab === 'notes');
-                input.style.display = tab === 'url' ? 'block' : 'none';
+                document.getElementById('tabHandout').classList.toggle('active-tab', tab === 'handout');
+                
+                input.placeholder = tab === 'handout' ? "Handout Image URL" : "URL (Stats or Image)";
+                shareHandoutBtn.style.display = (isGM && tab === 'handout') ? "block" : "none";
 
                 const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (tokenId) {
-                    if (tab === 'notes') {
-                        showLayer('notesArea');
-                    } else {
-                        const url = input.value.trim();
-                        if (url) updateIframe(url, true); else showLayer('notesArea');
-                    }
-                }
+                if (tokenId) syncView([tokenId]);
             };
 
             document.getElementById('tabUrl').onclick = () => switchTab('url');
             document.getElementById('tabNotes').onclick = () => switchTab('notes');
+            document.getElementById('tabHandout').onclick = () => switchTab('handout');
 
-         const openFloatingWindow = () => {
-    const url = input.value.trim();
-    if (!url) return;
-    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-
-    // Get the position of the content inside the extension
-    const rect = contentArea.getBoundingClientRect();
-
-    /**
-     * Logic:
-     * 1. window.screenX/Y = Position of the Extension window on your monitor.
-     * 2. rect.left/top = Position of the iframe content inside that window.
-     * 3. Math.max handles cases where screenX might be 0 but the window is actually open.
-     */
-    let left = window.screenX + rect.left;
-    let top = window.screenY + rect.top;
-
-    // Fallback: If the browser is sandboxed (reporting 0,0), center it on the screen instead.
-    if (window.screenX === 0 && window.screenY === 0) {
-        left = (screen.width / 2) - (rect.width / 2);
-        top = (screen.height / 2) - (rect.height / 2);
-    }
-
-    const w = 550;
-    const h = 650;
-
-    const features = `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`;
-    
-    // We use '_blank' to ensure the browser calculates a fresh position every time
-    const popup = window.open(fullUrl, "_blank", features);
-
-   if (popup && !popup.closed) {
-        // --- ADD THIS LINE BELOW ---
-        OBR.action.close(); 
-    } else {
-        OBR.notification.show("Popup blocked. Please check browser settings.");
-    }
-};
-
-            popoutBtn.onclick = openFloatingWindow;
-            errorPopBtn.onclick = openFloatingWindow;
+            popoutBtn.onclick = () => openFloatingWindow();
+            errorPopBtn.onclick = () => openFloatingWindow();
             statsFrame.onload = () => clearTimeout(loadTimeout);
 
             const syncView = async (selection) => {
@@ -231,30 +214,45 @@
                     localStorage.setItem(STORAGE_KEY, tokenId);
                     const url = token.metadata[`${ID}/url`] || "";
                     const note = token.metadata[`${ID}/note`] || "";
+                    const handout = token.metadata[`${ID}/handout`] || "";
                     const isPrivate = token.metadata[`${ID}/private`] ?? true;
 
                     status.innerText = token.text?.plainText || "";                    
-                    input.value = url;
-                    notesArea.value = note;
-                    if (isGM) privateCheck.checked = isPrivate;
+                    if (currentTab === 'url') input.value = url;
+                    else if (currentTab === 'notes') notesArea.value = note;
+                    else if (currentTab === 'handout') input.value = handout;
 
-                    if (isPrivate && !isGM) {
+                    if (isGM) {
+                        privateCheck.checked = isPrivate;
+                    }
+
+                    // For players, if private, they can only see Handout tab if there is a URL there.
+                    // (They still get the "Force Pop" if the GM clicks Share)
+                    if (!isGM && isPrivate) {
+                        if (currentTab === 'handout' && handout) {
+                            handoutImg.src = handout;
+                            return showLayer('handoutLayer');
+                        }
                         gmTools.style.visibility = "hidden";
                         return showLayer('secretMsg');
                     }
+
                     gmTools.style.visibility = "visible";
 
                     if (currentTab === 'notes') {
                         showLayer('notesArea');
+                    } else if (currentTab === 'handout') {
+                        if (handout) {
+                            handoutImg.src = handout;
+                            showLayer('handoutLayer');
+                        } else {
+                            showLayer('notesArea');
+                        }
                     } else if (url) {
-                        updateIframe(url, false); // false here to avoid infinite reload loop
+                        updateIframe(url, false);
                     } else {
                         showLayer('notesArea');
                     }
-                } else {
-                    localStorage.removeItem(STORAGE_KEY);
-                    status.innerText = "Ready";
-                    showLayer('noSelectionMsg');
                 }
             };
 
@@ -264,24 +262,27 @@
             saveBtn.onclick = async () => {
                 const currentSelection = await OBR.player.getSelection();
                 const tokenId = currentSelection?.[0] || localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) return OBR.notification.show("Select a token first!");
+                if (!tokenId) return;
 
-                let url = input.value.trim();
-                // 5e.tools Bestiary link helper
-                if (url.includes("bestiary.html#")) {
-                    url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
-                    OBR.notification.show(url);
-                }  
-                
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        item.metadata[`${ID}/url`] = url;//input.value.trim();
-                        item.metadata[`${ID}/note`] = notesArea.value;
+                        if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value.trim();
+                        if (currentTab === 'notes') item.metadata[`['${ID}/note']`] = notesArea.value;
+                        if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value.trim();
                         if (isGM) item.metadata[`${ID}/private`] = privateCheck.checked;
                     }
                 });
-                
                 OBR.notification.show("Saved!");
+            };
+
+            // GM CLICK SHARE: BROADCAST TO EVERYONE
+            shareHandoutBtn.onclick = async () => {
+                const imgUrl = input.value.trim();
+                if (!imgUrl) return OBR.notification.show("No image URL to share!");
+                
+                // Broadcast to all players (and self)
+                OBR.broadcast.sendMessage(BROADCAST_ID, { url: imgUrl });
+                OBR.notification.show("Handout pushed to players!");
             };
 
             clearBtn.onclick = async () => {
@@ -291,19 +292,11 @@
 
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        if (currentTab === 'url') {
-                            item.metadata[`${ID}/url`] = "";
-                            input.value = "";
-                        } else {
-                            item.metadata[`${ID}/note`] = "";
-                            notesArea.value = "";
-                        }
-                        if (!item.metadata[`${ID}/url`] && !item.metadata[`${ID}/note`]) {
-                            if (isGM) item.metadata[`${ID}/private`] = false;
-                        }
+                        const metaKey = currentTab === 'url' ? 'url' : (currentTab === 'handout' ? 'handout' : 'note');
+                        item.metadata[`${ID}/${metaKey}`] = "";
                     }
                 });
-                OBR.notification.show(`Cleared ${currentTab === 'url' ? 'URL' : 'Notes'}`);
+                input.value = "";
                 syncView([tokenId]);
             };
 

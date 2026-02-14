@@ -205,7 +205,10 @@
     // We use '_blank' to ensure the browser calculates a fresh position every time
     const popup = window.open(fullUrl, "_blank", features);
 
-    if (!popup || popup.closed) {
+   if (popup && !popup.closed) {
+        // --- ADD THIS LINE BELOW ---
+        OBR.action.close(); 
+    } else {
         OBR.notification.show("Popup blocked. Please check browser settings.");
     }
 };

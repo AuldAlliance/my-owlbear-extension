@@ -239,7 +239,20 @@
                 if (!tokenId) return;
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
-                        if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value;
+                        if (currentTab === 'url')
+                        {
+                            let url = input.value.trim();
+                            // 5e.tools Bestiary link helper
+                            if (url.includes("bestiary.html#")) {
+                                url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                                OBR.notification.show(url);
+                                item.metadata[`${ID}/url`] = url;
+                            }
+                            else
+                            {
+                                item.metadata[`${ID}/url`] = input.value;
+                            }
+                        }
                         if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value;
                         item.metadata[`${ID}/note`] = notesArea.value;
                         item.metadata[`${ID}/private`] = privateCheck.checked;

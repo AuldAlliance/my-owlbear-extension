@@ -152,24 +152,31 @@
             // Auto-save notes when user clicks away
             notesArea.onblur = saveToToken;
 
-            const switchTab = (tab) => {
-                currentTab = tab;
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-                document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)?.classList.add('active-tab');
-
-                if (isGM) {
-                    input.style.display = tab === 'notes' ? "none" : "block";
-                    shareHandoutBtn.style.display = tab === 'handout' ? "block" : "none";
-                } else {
-                    const isShared = tab === 'handout' || tab === 'notes';
-                    input.style.display = isShared ? "none" : "block";
-                    controlRow.style.display = isShared ? "none" : "flex";
-                    privateToggleContainer.style.display = "none";
-                }
-
-                input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
-                refreshUI();
-            };
+         const switchTab = (tab) => {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)?.classList.add('active-tab');
+        
+            const isNotes = tab === 'notes';
+            const isHandout = tab === 'handout';
+        
+            if (isGM) {
+                input.style.display = isNotes ? "none" : "block";
+                shareHandoutBtn.style.display = isHandout ? "block" : "none";
+                // Popout only makes sense if we aren't in Notes
+                popoutBtn.style.display = isNotes ? "none" : "flex"; 
+            } else {
+                const isShared = isHandout || isNotes;
+                input.style.display = isShared ? "none" : "block";
+                controlRow.style.display = isShared ? "none" : "flex";
+                privateToggleContainer.style.display = "none";
+                // Popout follows the controlRow visibility for players
+                popoutBtn.style.display = isShared ? "none" : "flex";
+            }
+        
+            input.value = isHandout ? (currentMetadata.handout || "") : (currentMetadata.url || "");
+            refreshUI();
+        };
 
             const refreshUI = () => {
                 const isPrivate = currentMetadata.private ?? true;

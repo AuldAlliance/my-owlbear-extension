@@ -231,6 +231,7 @@
             popoutBtn.onclick = () => {
                 const url = input.value.trim() || currentMetadata.url;
                 if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
+                OBR.action.close(); // Close the sidebar/popover
             };
 
             saveBtn.onclick = async () => {

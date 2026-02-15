@@ -87,7 +87,6 @@
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
         <div id="handoutLayer" class="layer"><img id="handoutImg" src="" alt="Handout"></div>
         <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
-        <div id="secretMsg" class="layer placeholder">🔒 Hidden by GM</div>
     </div>
 
     <script type="module">
@@ -122,20 +121,16 @@
                 currentTab = tab;
 
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-                document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active-tab');
-
-                const isNotes = tab === 'notes';
-                const isHandout = tab === 'handout';
+                const targetBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+                if(targetBtn) targetBtn.classList.add('active-tab');
 
                 if (isGM) {
-                    input.style.display = isNotes ? "none" : "block";
-                    controlRow.style.display = isNotes ? "none" : "flex";
-                    shareHandoutBtn.style.display = isHandout ? "block" : "none";
+                    input.style.display = (tab === 'notes') ? "none" : "block";
+                    controlRow.style.display = (tab === 'notes') ? "none" : "flex";
+                    shareHandoutBtn.style.display = (tab === 'handout') ? "block" : "none";
                 } else {
-                    if (isHandout) {
-                        input.style.display = "none";
-                        controlRow.style.display = "none";
-                    } else if (isNotes) {
+                    // Player logic
+                    if (tab === 'handout' || tab === 'notes') {
                         input.style.display = "none";
                         controlRow.style.display = "none";
                     } else {
@@ -159,15 +154,22 @@
                 const url = currentMetadata.url || "";
                 const handout = currentMetadata.handout || "";
 
-                // NEW: Player privacy logic for both URL and Notes
-                if (!isGM && isPrivate) {
-                    if (currentTab === 'url' || currentTab === 'notes') {
-                        gmTools.style.visibility = "hidden";
-                        return showLayer('secretMsg');
+                // Player tab-removal logic
+                if (!isGM) {
+                    const urlTab = document.getElementById('tabUrl');
+                    const notesTab = document.getElementById('tabNotes');
+                    
+                    if (isPrivate) {
+                        urlTab.style.display = "none";
+                        notesTab.style.display = "none";
+                        // If player was on a private tab, force them to Handout
+                        if (currentTab !== 'handout') return switchTab('handout');
+                    } else {
+                        urlTab.style.display = "block";
+                        notesTab.style.display = "block";
                     }
                 }
 
-                gmTools.style.visibility = "visible";
                 if (currentTab === 'notes') showLayer('notesArea');
                 else if (currentTab === 'handout') {
                     handoutImg.src = handout;
@@ -179,7 +181,7 @@
             };
 
             const showLayer = (id) => {
-                ['statsFrame', 'notesArea', 'handoutLayer', 'noSelectionMsg', 'secretMsg'].forEach(l => {
+                ['statsFrame', 'notesArea', 'handoutLayer', 'noSelectionMsg'].forEach(l => {
                     document.getElementById(l).classList.toggle('active', l === id);
                 });
             };
@@ -206,7 +208,6 @@
                         }
                         privateCheck.checked = currentMetadata.private;
                     }
-                    
                     if (document.activeElement !== notesArea) notesArea.value = currentMetadata.note;
                     refreshUI();
                 }

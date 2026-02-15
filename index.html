@@ -269,25 +269,34 @@
                 }
             });
             
-            // 3. The Share Button
-            shareHandoutBtn.onclick = () => {
+            shareHandoutBtn.onclick = async () => {
                 const url = input.value.trim();
-                
-                if (!url) {
-                    OBR.notification.show("Please enter a URL first!", "WARNING");
-                    return;
-                }
+                if (!url) return;
             
-                // Send to others
-                OBR.broadcast.sendMessage(BROADCAST_ID, { 
-                    type: "SHOW_HANDOUT", 
-                    url: url 
-                });
+                // 1. Get the current viewport so we can drop the image in the center of the GM's screen
+                const viewport = await OBR.viewport.getRect();
+                const center = {
+                    x: viewport.x + viewport.width / 2,
+                    y: viewport.y + viewport.height / 2
+                };
+            
+                // 2. Create the image item directly on the map
+                const handoutItem = OBR.itemUtils.buildItem()
+                    .itemType("IMAGE")
+                    .metadata({ [`${ID}/isHandout`]: true }) // Tag it so you can find/delete it later
+                    .image({
+                        url: url,
+                        mimeType: "image/png", // Usually works for most web images
+                        width: 600,
+                        height: 600,
+                    })
+                    .position(center)
+                    .layer("ATTACHMENT") // Puts it above the map but below tokens
+                    .build();
+            
+                await OBR.scene.items.addItems([handoutItem]);
                 
-                // Open for GM
-                openHandoutModal(url);
-                
-                OBR.notification.show("Handout shared!");
+                OBR.notification.show("Handout dropped onto the map!");
             };
             
             OBR.player.onChange(p => syncFromToken(p.selection));

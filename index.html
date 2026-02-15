@@ -102,7 +102,6 @@
             const controlRow = document.getElementById('controlRow');
             const notesArea = document.getElementById('notesArea');
             const handoutImg = document.getElementById('handoutImg');
-            const gmTools = document.getElementById('gmTools');
             const statsFrame = document.getElementById('statsFrame');
             const shareHandoutBtn = document.getElementById('shareHandoutBtn');
             const privateCheck = document.getElementById('privateCheck');
@@ -120,24 +119,27 @@
                 const targetBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
                 if(targetBtn) targetBtn.classList.add('active-tab');
 
+                // GM Controls
                 if (isGM) {
                     input.style.display = (tab === 'notes') ? "none" : "block";
                     controlRow.style.display = (tab === 'notes') ? "none" : "flex";
                     shareHandoutBtn.style.display = (tab === 'handout') ? "block" : "none";
+                    input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
                 } else {
-                    if (tab === 'handout' || tab === 'notes') {
-                        input.style.display = "none";
-                        controlRow.style.display = "none";
-                    } else {
+                    // Player Controls
+                    if (tab === 'url') {
                         input.style.display = "block";
                         controlRow.style.display = "flex";
                         saveBtn.style.display = "none";
                         clearBtn.style.display = "none";
                         privateToggleContainer.style.display = "none";
                         popoutBtn.style.display = "block";
+                        input.value = currentMetadata.url || "";
+                    } else {
+                        input.style.display = "none";
+                        controlRow.style.display = "none";
                     }
                 }
-                input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
                 refreshUI();
             };
 
@@ -152,7 +154,11 @@
                     if (isPrivate) {
                         urlTab.style.display = "none";
                         notesTab.style.display = "none";
-                        if (currentTab !== 'handout') return switchTab('handout');
+                        if (currentTab !== 'handout') {
+                            currentTab = 'handout'; // Force update currentTab variable
+                            switchTab('handout');
+                            return;
+                        }
                     } else {
                         urlTab.style.display = "block";
                         notesTab.style.display = "block";
@@ -180,11 +186,12 @@
             };
 
             const syncFromToken = async (selection) => {
-                let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
+                const tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) {
                     currentMetadata = { url: "", note: "", handout: "", private: true };
                     return showLayer('noSelectionMsg');
                 }
+
                 const items = await OBR.scene.items.getItems([tokenId]);
                 const token = items[0];
                 if (token) {
@@ -195,52 +202,7 @@
                         handout: token.metadata[`${ID}/handout`] || "",
                         private: token.metadata[`${ID}/private`] ?? true
                     };
+                    
                     if (isGM) {
                         if (document.activeElement !== input) {
-                            input.value = (currentTab === 'handout') ? currentMetadata.handout : currentMetadata.url;
-                        }
-                        privateCheck.checked = currentMetadata.private;
-                    }
-                    if (document.activeElement !== notesArea) notesArea.value = currentMetadata.note;
-                    refreshUI();
-                }
-            };
-
-            notesArea.onblur = async () => {
-                const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (!tokenId || !isGM) return;
-                await OBR.scene.items.updateItems([tokenId], (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/note`] = notesArea.value;
-                    }
-                });
-            };
-
-            document.getElementById('tabUrl').onclick = () => switchTab('url');
-            document.getElementById('tabNotes').onclick = () => switchTab('notes');
-            document.getElementById('tabHandout').onclick = () => switchTab('handout');
-            
-            // Re-added the closure of the extension upon popout
-            popoutBtn.onclick = () => {
-                const url = input.value.trim() || currentMetadata.url;
-                if (url) {
-                    window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
-                    OBR.action.close(); 
-                }
-            };
-
-            saveBtn.onclick = async () => {
-                const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) return;
-                await OBR.scene.items.updateItems([tokenId], (items) => {
-                    for (let item of items) {
-                        if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value;
-                        if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value;
-                        item.metadata[`${ID}/note`] = notesArea.value;
-                        item.metadata[`${ID}/private`] = privateCheck.checked;
-                    }
-                });
-                OBR.notification.show("Saved!");
-            };
-
-            OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.
+                            input.value = (currentTab === 'handout') ? currentMetadata.hand

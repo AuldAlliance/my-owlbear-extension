@@ -36,12 +36,11 @@
         #privateCheck:checked + .eye-button svg { fill: #f28b82; }
 
         button { cursor: pointer; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 10px; color: white; border: none; transition: background 0.2s; }
-        #saveBtn { flex: 2; height: 26px; background: #2196F3; }
-        #clearBtn { flex: 1; height: 26px; background: #f44336; }
         #popoutBtn { width: 34px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
-        #shareHandoutBtn { background: #4caf50; height: 26px; padding: 0 8px; display: none; }
+        #shareHandoutBtn { flex-grow: 1; background: #4caf50; height: 26px; padding: 0 8px; display: none; }
 
-        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; font-size: 11px; }
+        input[type="text"]:focus { border-color: #2196F3; }
         
         #contentArea { flex-grow: 1; position: relative; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; background: rgba(0,0,0,0.2); overflow: hidden; }
         .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
@@ -64,7 +63,7 @@
     
     <div class="controls">
         <div id="gmTools">
-            <input type="text" id="urlInput" placeholder="URL">
+            <input type="text" id="urlInput" placeholder="Enter URL and press Enter to save...">
             <div id="controlRow" class="gm-action-row">
                 <div id="privateToggleContainer" class="eye-container" title="Toggle Private/Public">
                     <input type="checkbox" id="privateCheck" checked>
@@ -72,10 +71,8 @@
                         <svg class="eye-open" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                     </div>
                 </div>
-                <button id="saveBtn">Save</button>
-                <button id="shareHandoutBtn" title="Push image to all players">Share</button>
-                <button id="clearBtn">Clear</button>
-                <button id="popoutBtn">
+                <button id="shareHandoutBtn" title="Push image to all players">Share Handout</button>
+                <button id="popoutBtn" title="Open in new window">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </button>
             </div>
@@ -102,44 +99,63 @@
             const controlRow = document.getElementById('controlRow');
             const notesArea = document.getElementById('notesArea');
             const handoutImg = document.getElementById('handoutImg');
-            const gmTools = document.getElementById('gmTools');
             const statsFrame = document.getElementById('statsFrame');
             const shareHandoutBtn = document.getElementById('shareHandoutBtn');
             const privateCheck = document.getElementById('privateCheck');
             const privateToggleContainer = document.getElementById('privateToggleContainer');
-            const saveBtn = document.getElementById('saveBtn');
-            const clearBtn = document.getElementById('clearBtn');
             const popoutBtn = document.getElementById('popoutBtn');
             
             let currentTab = 'url';
             let currentMetadata = { url: "", note: "", handout: "", private: true };
 
+            const saveToToken = async () => {
+                const tokenId = localStorage.getItem(STORAGE_KEY);
+                if (!tokenId || !isGM) return;
+
+                await OBR.scene.items.updateItems([tokenId], (items) => {
+                    for (let item of items) {
+                        let val = input.value.trim();
+                        
+                        if (currentTab === 'url') {
+                            // 5e.tools Bestiary link helper
+                            if (val.includes("bestiary.html#")) {
+                                val = decodeURIComponent(val).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                                input.value = val;
+                            }
+                            item.metadata[`${ID}/url`] = val;
+                        } else if (currentTab === 'handout') {
+                            item.metadata[`${ID}/handout`] = val;
+                        }
+                        
+                        item.metadata[`${ID}/private`] = privateCheck.checked;
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                    }
+                });
+                OBR.notification.show("Updated!");
+            };
+
+            // Save URL on Enter key
+            input.onkeydown = (e) => { if (e.key === 'Enter') saveToToken(); };
+            
+            // Save Privacy toggle immediately on change
+            privateCheck.onchange = saveToToken;
+
+            // Auto-save notes when user clicks away
+            notesArea.onblur = saveToToken;
+
             const switchTab = (tab) => {
                 currentTab = tab;
-
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-                const targetBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
-                if(targetBtn) targetBtn.classList.add('active-tab');
-
-                const isNotes = tab === 'notes';
-                const isHandout = tab === 'handout';
+                document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`)?.classList.add('active-tab');
 
                 if (isGM) {
-                    input.style.display = isNotes ? "none" : "block";
-                    controlRow.style.display = isNotes ? "none" : "flex";
-                    shareHandoutBtn.style.display = isHandout ? "block" : "none";
+                    input.style.display = tab === 'notes' ? "none" : "block";
+                    shareHandoutBtn.style.display = tab === 'handout' ? "block" : "none";
                 } else {
-                    if (isHandout || isNotes) {
-                        input.style.display = "none";
-                        controlRow.style.display = "none";
-                    } else {
-                        input.style.display = "block";
-                        controlRow.style.display = "flex";
-                        saveBtn.style.display = "none";
-                        clearBtn.style.display = "none";
-                        privateToggleContainer.style.display = "none";
-                        popoutBtn.style.display = "block";
-                    }
+                    const isShared = tab === 'handout' || tab === 'notes';
+                    input.style.display = isShared ? "none" : "block";
+                    controlRow.style.display = isShared ? "none" : "flex";
+                    privateToggleContainer.style.display = "none";
                 }
 
                 input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
@@ -148,9 +164,6 @@
 
             const refreshUI = () => {
                 const isPrivate = currentMetadata.private ?? true;
-                const url = currentMetadata.url || "";
-                const handout = currentMetadata.handout || "";
-
                 if (!isGM) {
                     const urlTab = document.getElementById('tabUrl');
                     const notesTab = document.getElementById('tabNotes');
@@ -167,11 +180,10 @@
                 if (currentTab === 'notes') {
                     showLayer('notesArea');
                 } else if (currentTab === 'handout') {
-                    if(handoutImg.src !== handout) handoutImg.src = handout;
+                    if(handoutImg.src !== currentMetadata.handout) handoutImg.src = currentMetadata.handout;
                     showLayer('handoutLayer');
-                } else if (url) {
-                    const formattedUrl = url.startsWith('http') ? url : `https://${url}`;
-                    // FIXED: Only refresh iframe if source changed
+                } else if (currentMetadata.url) {
+                    const formattedUrl = currentMetadata.url.startsWith('http') ? currentMetadata.url : `https://${currentMetadata.url}`;
                     if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
                     showLayer('statsFrame');
                 } else {
@@ -187,10 +199,7 @@
 
             const syncFromToken = async (selection) => {
                 let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) {
-                    currentMetadata = { url: "", note: "", handout: "", private: true };
-                    return showLayer('noSelectionMsg');
-                }
+                if (!tokenId) return showLayer('noSelectionMsg');
 
                 const items = await OBR.scene.items.getItems([tokenId]);
                 const token = items[0];
@@ -214,16 +223,6 @@
                 }
             };
 
-            notesArea.onblur = async () => {
-                const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (!tokenId || !isGM) return; // Only GM updates metadata via notes
-                await OBR.scene.items.updateItems([tokenId], (items) => {
-                    for (let item of items) {
-                        item.metadata[`${ID}/note`] = notesArea.value;
-                    }
-                });
-            };
-
             document.getElementById('tabUrl').onclick = () => switchTab('url');
             document.getElementById('tabNotes').onclick = () => switchTab('notes');
             document.getElementById('tabHandout').onclick = () => switchTab('handout');
@@ -231,48 +230,19 @@
             popoutBtn.onclick = () => {
                 const url = input.value.trim() || currentMetadata.url;
                 if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
-                OBR.action.close(); // Close the sidebar/popover
-            };
-
-            saveBtn.onclick = async () => {
-                const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (!tokenId) return;
-                await OBR.scene.items.updateItems([tokenId], (items) => {
-                    for (let item of items) {
-                        if (currentTab === 'url')
-                        {
-                            let url = input.value.trim();
-                            // 5e.tools Bestiary link helper
-                            if (url.includes("bestiary.html#")) {
-                                url = decodeURIComponent(url).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
-                                OBR.notification.show(url);
-                                item.metadata[`${ID}/url`] = url;
-                            }
-                            else
-                            {
-                                item.metadata[`${ID}/url`] = input.value;
-                            }
-                        }
-                        if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value;
-                        item.metadata[`${ID}/note`] = notesArea.value;
-                        item.metadata[`${ID}/private`] = privateCheck.checked;
-                    }
-                });
-                OBR.notification.show("Saved!");
+                OBR.action.close();
             };
 
             OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
-            shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: input.value });
+            shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: currentMetadata.handout });
             
-            // Listen for changes but avoid unnecessary heavy refreshes
             OBR.player.onChange(p => syncFromToken(p.selection));
-            OBR.scene.items.onChange(items => {
+            OBR.scene.items.onChange(() => {
                const activeId = localStorage.getItem(STORAGE_KEY);
                if (activeId) syncFromToken([activeId]);
             });
 
             syncFromToken(await OBR.player.getSelection());
-            switchTab('url');
         });
     </script>
 </body>

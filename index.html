@@ -262,6 +262,17 @@
                     });
                 }
             });
+
+            shareHandoutBtn.onclick = () => {
+                const url = input.value.trim(); // This gets the URL currently in the box
+                if (url) {
+                    OBR.broadcast.sendMessage(BROADCAST_ID, { 
+                        type: "SHOW_HANDOUT", // <--- Must match the listener!
+                        url: url 
+                    });
+                    OBR.notification.show("Handout shared!");
+                }
+            };
             
             OBR.player.onChange(p => syncFromToken(p.selection));
             OBR.scene.items.onChange(() => {

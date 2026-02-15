@@ -249,8 +249,19 @@
                 OBR.action.close();
             };
 
-            OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
-            shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: currentMetadata.handout });
+            //OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
+            //shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: currentMetadata.handout });
+            OBR.broadcast.onMessage(BROADCAST_ID, (e) => {
+                if (e.data.type === "SHOW_HANDOUT") {
+                    OBR.modal.open({
+                        id: `${ID}/handout-viewer`,
+                        // Using the data URL wrapper to prevent "Refused to display" errors
+                        url: `data:text/html,<html><body style="margin:0;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,0.8);overflow:hidden;"><img src="${e.data.url}" style="max-width:100vw;max-height:100vh;object-fit:contain;"></body></html>`,
+                        height: 600,
+                        width: 800,
+                    });
+                }
+            });
             
             OBR.player.onChange(p => syncFromToken(p.selection));
             OBR.scene.items.onChange(() => {

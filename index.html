@@ -134,8 +134,17 @@
                 OBR.notification.show("Updated!");
             };
 
-            // Save URL on Enter key
-            input.onkeydown = (e) => { if (e.key === 'Enter') saveToToken(); };
+            // Save on Enter key (for finished URLs)
+            input.onkeydown = (e) => { 
+                if (e.key === 'Enter') saveToToken(); 
+            };
+
+            // Save immediately if the user clears the field (Backspace/Delete/Select All + Del)
+            input.oninput = () => {
+                if (input.value.trim() === "") {
+                    saveToToken();
+                }
+            };
             
             // Save Privacy toggle immediately on change
             privateCheck.onchange = saveToToken;

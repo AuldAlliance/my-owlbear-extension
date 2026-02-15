@@ -116,20 +116,16 @@
 
             const switchTab = (tab) => {
                 currentTab = tab;
-
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
                 const targetBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
                 if(targetBtn) targetBtn.classList.add('active-tab');
 
-                const isNotes = tab === 'notes';
-                const isHandout = tab === 'handout';
-
                 if (isGM) {
-                    input.style.display = isNotes ? "none" : "block";
-                    controlRow.style.display = isNotes ? "none" : "flex";
-                    shareHandoutBtn.style.display = isHandout ? "block" : "none";
+                    input.style.display = (tab === 'notes') ? "none" : "block";
+                    controlRow.style.display = (tab === 'notes') ? "none" : "flex";
+                    shareHandoutBtn.style.display = (tab === 'handout') ? "block" : "none";
                 } else {
-                    if (isHandout || isNotes) {
+                    if (tab === 'handout' || tab === 'notes') {
                         input.style.display = "none";
                         controlRow.style.display = "none";
                     } else {
@@ -141,7 +137,6 @@
                         popoutBtn.style.display = "block";
                     }
                 }
-
                 input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
                 refreshUI();
             };
@@ -171,7 +166,6 @@
                     showLayer('handoutLayer');
                 } else if (url) {
                     const formattedUrl = url.startsWith('http') ? url : `https://${url}`;
-                    // FIXED: Only refresh iframe if source changed
                     if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
                     showLayer('statsFrame');
                 } else {
@@ -191,7 +185,6 @@
                     currentMetadata = { url: "", note: "", handout: "", private: true };
                     return showLayer('noSelectionMsg');
                 }
-
                 const items = await OBR.scene.items.getItems([tokenId]);
                 const token = items[0];
                 if (token) {
@@ -202,7 +195,6 @@
                         handout: token.metadata[`${ID}/handout`] || "",
                         private: token.metadata[`${ID}/private`] ?? true
                     };
-                    
                     if (isGM) {
                         if (document.activeElement !== input) {
                             input.value = (currentTab === 'handout') ? currentMetadata.handout : currentMetadata.url;
@@ -216,7 +208,7 @@
 
             notesArea.onblur = async () => {
                 const tokenId = localStorage.getItem(STORAGE_KEY);
-                if (!tokenId || !isGM) return; // Only GM updates metadata via notes
+                if (!tokenId || !isGM) return;
                 await OBR.scene.items.updateItems([tokenId], (items) => {
                     for (let item of items) {
                         item.metadata[`${ID}/note`] = notesArea.value;
@@ -228,9 +220,13 @@
             document.getElementById('tabNotes').onclick = () => switchTab('notes');
             document.getElementById('tabHandout').onclick = () => switchTab('handout');
             
+            // Re-added the closure of the extension upon popout
             popoutBtn.onclick = () => {
                 const url = input.value.trim() || currentMetadata.url;
-                if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
+                if (url) {
+                    window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
+                    OBR.action.close(); 
+                }
             };
 
             saveBtn.onclick = async () => {
@@ -247,19 +243,4 @@
                 OBR.notification.show("Saved!");
             };
 
-            OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
-            shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: input.value });
-            
-            // Listen for changes but avoid unnecessary heavy refreshes
-            OBR.player.onChange(p => syncFromToken(p.selection));
-            OBR.scene.items.onChange(items => {
-               const activeId = localStorage.getItem(STORAGE_KEY);
-               if (activeId) syncFromToken([activeId]);
-            });
-
-            syncFromToken(await OBR.player.getSelection());
-            switchTab('url');
-        });
-    </script>
-</body>
-</html>
+            OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.

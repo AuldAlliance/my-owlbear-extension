@@ -102,6 +102,7 @@
             const controlRow = document.getElementById('controlRow');
             const notesArea = document.getElementById('notesArea');
             const handoutImg = document.getElementById('handoutImg');
+            const gmTools = document.getElementById('gmTools');
             const statsFrame = document.getElementById('statsFrame');
             const shareHandoutBtn = document.getElementById('shareHandoutBtn');
             const privateCheck = document.getElementById('privateCheck');
@@ -115,31 +116,33 @@
 
             const switchTab = (tab) => {
                 currentTab = tab;
+
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
                 const targetBtn = document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
                 if(targetBtn) targetBtn.classList.add('active-tab');
 
-                // GM Controls
+                const isNotes = tab === 'notes';
+                const isHandout = tab === 'handout';
+
                 if (isGM) {
-                    input.style.display = (tab === 'notes') ? "none" : "block";
-                    controlRow.style.display = (tab === 'notes') ? "none" : "flex";
-                    shareHandoutBtn.style.display = (tab === 'handout') ? "block" : "none";
-                    input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
+                    input.style.display = isNotes ? "none" : "block";
+                    controlRow.style.display = isNotes ? "none" : "flex";
+                    shareHandoutBtn.style.display = isHandout ? "block" : "none";
                 } else {
-                    // Player Controls
-                    if (tab === 'url') {
+                    if (isHandout || isNotes) {
+                        input.style.display = "none";
+                        controlRow.style.display = "none";
+                    } else {
                         input.style.display = "block";
                         controlRow.style.display = "flex";
                         saveBtn.style.display = "none";
                         clearBtn.style.display = "none";
                         privateToggleContainer.style.display = "none";
                         popoutBtn.style.display = "block";
-                        input.value = currentMetadata.url || "";
-                    } else {
-                        input.style.display = "none";
-                        controlRow.style.display = "none";
                     }
                 }
+
+                input.value = (tab === 'handout') ? (currentMetadata.handout || "") : (currentMetadata.url || "");
                 refreshUI();
             };
 
@@ -154,11 +157,7 @@
                     if (isPrivate) {
                         urlTab.style.display = "none";
                         notesTab.style.display = "none";
-                        if (currentTab !== 'handout') {
-                            currentTab = 'handout'; // Force update currentTab variable
-                            switchTab('handout');
-                            return;
-                        }
+                        if (currentTab !== 'handout') return switchTab('handout');
                     } else {
                         urlTab.style.display = "block";
                         notesTab.style.display = "block";
@@ -172,6 +171,7 @@
                     showLayer('handoutLayer');
                 } else if (url) {
                     const formattedUrl = url.startsWith('http') ? url : `https://${url}`;
+                    // FIXED: Only refresh iframe if source changed
                     if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
                     showLayer('statsFrame');
                 } else {
@@ -186,7 +186,7 @@
             };
 
             const syncFromToken = async (selection) => {
-                const tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
+                let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
                 if (!tokenId) {
                     currentMetadata = { url: "", note: "", handout: "", private: true };
                     return showLayer('noSelectionMsg');
@@ -205,4 +205,61 @@
                     
                     if (isGM) {
                         if (document.activeElement !== input) {
-                            input.value = (currentTab === 'handout') ? currentMetadata.hand
+                            input.value = (currentTab === 'handout') ? currentMetadata.handout : currentMetadata.url;
+                        }
+                        privateCheck.checked = currentMetadata.private;
+                    }
+                    if (document.activeElement !== notesArea) notesArea.value = currentMetadata.note;
+                    refreshUI();
+                }
+            };
+
+            notesArea.onblur = async () => {
+                const tokenId = localStorage.getItem(STORAGE_KEY);
+                if (!tokenId || !isGM) return; // Only GM updates metadata via notes
+                await OBR.scene.items.updateItems([tokenId], (items) => {
+                    for (let item of items) {
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                    }
+                });
+            };
+
+            document.getElementById('tabUrl').onclick = () => switchTab('url');
+            document.getElementById('tabNotes').onclick = () => switchTab('notes');
+            document.getElementById('tabHandout').onclick = () => switchTab('handout');
+            
+            popoutBtn.onclick = () => {
+                const url = input.value.trim() || currentMetadata.url;
+                if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
+            };
+
+            saveBtn.onclick = async () => {
+                const tokenId = localStorage.getItem(STORAGE_KEY);
+                if (!tokenId) return;
+                await OBR.scene.items.updateItems([tokenId], (items) => {
+                    for (let item of items) {
+                        if (currentTab === 'url') item.metadata[`${ID}/url`] = input.value;
+                        if (currentTab === 'handout') item.metadata[`${ID}/handout`] = input.value;
+                        item.metadata[`${ID}/note`] = notesArea.value;
+                        item.metadata[`${ID}/private`] = privateCheck.checked;
+                    }
+                });
+                OBR.notification.show("Saved!");
+            };
+
+            OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
+            shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: input.value });
+            
+            // Listen for changes but avoid unnecessary heavy refreshes
+            OBR.player.onChange(p => syncFromToken(p.selection));
+            OBR.scene.items.onChange(items => {
+               const activeId = localStorage.getItem(STORAGE_KEY);
+               if (activeId) syncFromToken([activeId]);
+            });
+
+            syncFromToken(await OBR.player.getSelection());
+            switchTab('url');
+        });
+    </script>
+</body>
+</html>

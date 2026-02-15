@@ -251,25 +251,36 @@
 
             //OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
             //shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: currentMetadata.handout });
+            // 1. Create a helper function so both the button and the listener can use it
+            const openHandoutModal = (url) => {
+                OBR.modal.open({
+                    id: `${ID}/handout-viewer`,
+                    url: `data:text/html,<html><body style="margin:0;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,0.8);overflow:hidden;"><img src="${url}" style="max-width:100vw;max-height:100vh;object-fit:contain;"></body></html>`,
+                    height: 600,
+                    width: 800,
+                });
+            };
+            
+            // 2. The Broadcast Listener (for players)
             OBR.broadcast.onMessage(BROADCAST_ID, (e) => {
                 if (e.data.type === "SHOW_HANDOUT") {
-                    OBR.modal.open({
-                        id: `${ID}/handout-viewer`,
-                        // Using the data URL wrapper to prevent "Refused to display" errors
-                        url: `data:text/html,<html><body style="margin:0;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,0.8);overflow:hidden;"><img src="${e.data.url}" style="max-width:100vw;max-height:100vh;object-fit:contain;"></body></html>`,
-                        height: 600,
-                        width: 800,
-                    });
+                    openHandoutModal(e.data.url);
                 }
             });
-
+            
+            // 3. The Share Button (for GM)
             shareHandoutBtn.onclick = () => {
-                const url = input.value.trim(); // This gets the URL currently in the box
+                const url = input.value.trim();
                 if (url) {
+                    // Send to everyone else
                     OBR.broadcast.sendMessage(BROADCAST_ID, { 
-                        type: "SHOW_HANDOUT", // <--- Must match the listener!
+                        type: "SHOW_HANDOUT", 
                         url: url 
                     });
+                    
+                    // Open it for the GM immediately so you can see it too!
+                    openHandoutModal(url);
+                    
                     OBR.notification.show("Handout shared!");
                 }
             };

@@ -253,34 +253,38 @@
             //shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: currentMetadata.handout });
            // 1. Helper function to drop image on map
         const dropHandoutOnMap = async (url) => {
-                try {
-                    const viewport = await OBR.viewport.getRect();
-                    const center = {
-                        x: viewport.x + viewport.width / 2,
-                        y: viewport.y + viewport.height / 2
-                    };
-            
-                    // Build the image item using the correct SDK syntax
-                    const item = OBR.itemUtils.buildItem()
-                        .itemType("IMAGE")
-                        .metadata({ [`${ID}/isHandout`]: true })
-                        .image({
-                            url: url,
-                            mime: "image/png", // Use 'mime', not 'mimeType'
-                            width: 600,
-                            height: 600,
-                        })
-                        .position(center)
-                        .layer("ATTACHMENT") 
-                        .build();
-            
-                    await OBR.scene.items.addItems([item]);
-                    OBR.notification.show("Handout dropped onto map!");
-                } catch (err) {
-                    console.error("Detailed Error:", err);
-                    OBR.notification.show("Drop failed. Check if URL is a direct image link.", "ERROR");
-                }
-            };
+            try {
+                const viewport = await OBR.viewport.getRect();
+                const center = {
+                    x: viewport.x + viewport.width / 2,
+                    y: viewport.y + viewport.height / 2
+                };
+        
+                // Determine MIME type based on extension, defaulting to webp
+                let mimeType = "image/webp";
+                if (url.toLowerCase().endsWith(".png")) mimeType = "image/png";
+                if (url.toLowerCase().endsWith(".jpg") || url.toLowerCase().endsWith(".jpeg")) mimeType = "image/jpeg";
+        
+                const item = OBR.itemUtils.buildItem()
+                    .itemType("IMAGE")
+                    .metadata({ [`${ID}/isHandout`]: true })
+                    .image({
+                        url: url,
+                        mime: mimeType, // This now matches your WebP file
+                        width: 600,
+                        height: 600,
+                    })
+                    .position(center)
+                    .layer("ATTACHMENT") 
+                    .build();
+        
+                await OBR.scene.items.addItems([item]);
+                OBR.notification.show("Handout dropped onto map!");
+            } catch (err) {
+                console.error("Detailed Error:", err);
+                OBR.notification.show("Drop failed. Check if URL is a direct image link.", "ERROR");
+            }
+        };
 
             // 2. Share Button Logic
             shareHandoutBtn.onclick = async () => {

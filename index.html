@@ -252,38 +252,33 @@
             //OBR.broadcast.onMessage(BROADCAST_ID, (e) => window.open(e.data.url, "_blank", "width=600,height=700"));
             //shareHandoutBtn.onclick = () => OBR.broadcast.sendMessage(BROADCAST_ID, { url: currentMetadata.handout });
            // 1. Helper function to drop image on map
-            const dropHandoutOnMap = async (url) => {
+        const dropHandoutOnMap = async (url) => {
                 try {
-                    // Get map data to place it correctly
-                    const [gridScale, viewport] = await Promise.all([
-                        OBR.scene.grid.getScale(),
-                        OBR.viewport.getRect()
-                    ]);
-
+                    const viewport = await OBR.viewport.getRect();
                     const center = {
                         x: viewport.x + viewport.width / 2,
                         y: viewport.y + viewport.height / 2
                     };
-
-                    // Build the image item
+            
+                    // Build the image item using the correct SDK syntax
                     const item = OBR.itemUtils.buildItem()
                         .itemType("IMAGE")
                         .metadata({ [`${ID}/isHandout`]: true })
                         .image({
                             url: url,
-                            mimeType: "image/image", // A generic catch-all that often bypasses strict checks
+                            mime: "image/png", // Use 'mime', not 'mimeType'
                             width: 600,
                             height: 600,
                         })
                         .position(center)
                         .layer("ATTACHMENT") 
                         .build();
-
+            
                     await OBR.scene.items.addItems([item]);
                     OBR.notification.show("Handout dropped onto map!");
                 } catch (err) {
-                    console.error("Failed to drop handout:", err);
-                    OBR.notification.show("Error: Could not drop image.", "ERROR");
+                    console.error("Detailed Error:", err);
+                    OBR.notification.show("Drop failed. Check if URL is a direct image link.", "ERROR");
                 }
             };
 

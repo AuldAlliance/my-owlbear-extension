@@ -225,6 +225,13 @@
             const token = items[0];
             if (token) {
                 localStorage.setItem(STORAGE_KEY, tokenId);
+
+                if (token.text && token.text.plainText && token.text.plainText.trim() !== "") {
+                    statusEl.innerText = token.text.plainText;
+                } else {
+                    statusEl.innerText = "READY";
+                }
+                
                 currentMetadata = {
                     url: token.metadata[`${ID}/url`] || "",
                     note: token.metadata[`${ID}/note`] || "",

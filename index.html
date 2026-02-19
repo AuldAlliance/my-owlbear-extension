@@ -223,6 +223,7 @@
             if (!tokenId) return showLayer('noSelectionMsg');
             const items = await OBR.scene.items.getItems([tokenId]);
             const token = items[0];
+            document.getElementById('status').innerText = token.text?.plainText || "Ready"; //added here
             if (token) {
                 localStorage.setItem(STORAGE_KEY, tokenId);
                 currentMetadata = {

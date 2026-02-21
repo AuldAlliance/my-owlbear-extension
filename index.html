@@ -181,7 +181,7 @@
                 input.style.display = isShared ? "none" : "block";
                 controlRow.style.display = isShared ? "none" : "flex";
                 privateToggleContainer.style.display = "none";
-                popoutBtn.style.display = isShared ? "none" : "flex";
+                popoutBtn.style.display = isHandout ? "none" : "flex";
             }
             input.value = isHandout ? (currentMetadata.handout || "") : (currentMetadata.url || "");
             refreshUI();

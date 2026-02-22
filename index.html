@@ -81,7 +81,7 @@
         <iframe id="statsFrame" class="layer" style="background:white; width:100%; height:100%;"></iframe>
         <textarea id="notesArea" class="layer" placeholder="Type notes here..."></textarea>
         <div id="handoutLayer" class="layer"><img id="handoutImg" src="" alt="Handout"></div>
-        <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>
+        <div id="noSelectionMsg" class="layer placeholder active">Select a token to begin.</div>    
     </div>
 
     <script type="module">
@@ -167,6 +167,9 @@
 
         const refreshUI = () => {
             const isPrivate = currentMetadata.private ?? true;
+            const msgElement = document.getElementById('noSelectionMsg');
+        
+            // Player Privacy Logic
             if (!isGM) {
                 const urlTab = document.getElementById('tabUrl');
                 const notesTab = document.getElementById('tabNotes');
@@ -179,15 +182,30 @@
                     notesTab.style.display = "block";
                 }
             }
-            if (currentTab === 'notes') { showLayer('notesArea'); } 
+        
+            // Guidance Logic
+            if (currentTab === 'notes') {
+                showLayer('notesArea');
+            } 
             else if (currentTab === 'handout') {
-                if(handoutImg.src !== currentMetadata.handout) handoutImg.src = currentMetadata.handout;
-                showLayer('handoutLayer');
-            } else if (currentMetadata.url) {
-                const formattedUrl = currentMetadata.url.startsWith('http') ? currentMetadata.url : `https://${currentMetadata.url}`;
-                if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
-                showLayer('statsFrame');
-            } else { showLayer('notesArea'); }
+                if (currentMetadata.handout) {
+                    if (handoutImg.src !== currentMetadata.handout) handoutImg.src = currentMetadata.handout;
+                    showLayer('handoutLayer');
+                } else {
+                    msgElement.innerText = "No visual URL entered for this token.";
+                    showLayer('noSelectionMsg');
+                }
+            } 
+            else if (currentTab === 'url') {
+                if (currentMetadata.url) {
+                    const formattedUrl = currentMetadata.url.startsWith('http') ? currentMetadata.url : `https://${currentMetadata.url}`;
+                    if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
+                    showLayer('statsFrame');
+                } else {
+                    msgElement.innerText = "No LINK URL entered for this token.";
+                    showLayer('noSelectionMsg');
+                }
+            }
         };
 
         const showLayer = (id) => {
@@ -198,7 +216,12 @@
 
         const syncFromToken = async (selection) => {
             let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
-            if (!tokenId) return showLayer('noSelectionMsg');
+            if (!tokenId) {
+                const msgElement = document.getElementById('noSelectionMsg');
+                msgElement.innerText = "Select a token to begin."; // Reset message
+                return showLayer('noSelectionMsg');
+            }
+            
             const items = await OBR.scene.items.getItems([tokenId]);
             const token = items[0];
             document.getElementById('status').innerText = token.text?.plainText || "Ready"; //added here

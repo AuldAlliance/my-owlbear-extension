@@ -227,7 +227,7 @@
                     if (handoutImg.src !== currentMetadata.handout) handoutImg.src = currentMetadata.handout;
                     showLayer('handoutLayer');
                 } else {
-                    msgElement.innerText = "No visual URL entered for this token.";
+                    msgElement.innerText = "No VISUAL URL entered for token";
                     showLayer('noSelectionMsg');
                 }
             } 
@@ -237,7 +237,7 @@
                     if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
                     showLayer('statsFrame');
                 } else {
-                    msgElement.innerText = "No LINK URL entered for this token.";
+                    msgElement.innerText = "No LINK URL entered for token.";
                     showLayer('noSelectionMsg');
                 }
             }

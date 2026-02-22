@@ -235,12 +235,12 @@
                     handout: token.metadata[`${ID}/handout`] || "",
                     private: token.metadata[`${ID}/private`] ?? true
                 };
-               // if (isGM) {
-                    if (document.activeElement !== input) {
-                        input.value = (currentTab === 'handout') ? currentMetadata.handout : currentMetadata.url;
-                    }
-                    privateCheck.checked = currentMetadata.private;
-              //  }
+       
+                if (document.activeElement !== input) {
+                    input.value = (currentTab === 'handout') ? currentMetadata.handout : currentMetadata.url;
+                }
+                privateCheck.checked = currentMetadata.private;
+           
                 if (document.activeElement !== notesArea) notesArea.value = currentMetadata.note;
                 refreshUI();
             }

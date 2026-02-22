@@ -11,8 +11,10 @@
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             color: white; font-family: sans-serif; padding: 12px; margin: 0; 
-            display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden;
+            display: flex; flex-direction: column; height: auto; box-sizing: border-box; overflow: hidden;
         }
+        /* Add this new rule */
+        .hidden-content { display: none !important; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
         #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
         
@@ -42,7 +44,7 @@
         input[type="text"]:focus { border-color: #2196F3; }
         
         #contentArea { flex-grow: 1; position: relative; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 4px; background: rgba(0,0,0,0.2); overflow: hidden; }
-        .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
+        .layer { position: relative; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden; border: none; }
         .active { visibility: visible; }
 
         #notesArea { padding: 12px; box-sizing: border-box; color: #ddd; resize: none; font-family: inherit; font-size: 14px; background: transparent; width: 100%; height: 100%; border: none; outline: none; line-height: 1.4; }
@@ -188,6 +190,28 @@
                 if (statsFrame.src !== formattedUrl) statsFrame.src = formattedUrl;
                 showLayer('statsFrame');
             } else { showLayer('notesArea'); }
+
+            // Add this at the very bottom of the function:
+            updateWindowSize();
+        };
+
+        const updateWindowSize = async () => {
+            const contentArea = document.getElementById('contentArea');
+            
+            const hasContent = (currentTab === 'notes') || 
+                               (currentTab === 'url' && currentMetadata.url) || 
+                               (currentTab === 'handout' && currentMetadata.handout);
+        
+            if (hasContent) {
+                contentArea.classList.remove('hidden-content');
+                // Tell Owlbear to expand the window back to 500px (or your preferred size)
+                await OBR.action.setHeight(500); 
+            } else {
+                contentArea.classList.add('hidden-content');
+                // Tell Owlbear to shrink the window to just fit the header + tabs + controls
+                // 130px is usually enough for the buttons/input area
+                await OBR.action.setHeight(130); 
+            }
         };
 
         const showLayer = (id) => {

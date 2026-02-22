@@ -137,7 +137,10 @@
 
         const saveToToken = async () => {
             const tokenId = localStorage.getItem(STORAGE_KEY);
-            if (!tokenId || !isGM) return;
+
+            const isPrivate = currentMetadata.private ?? true;
+            // Allow save if user is GM OR if the token is not private
+            if (!tokenId || (!isGM && isPrivate)) return;
 
             await OBR.scene.items.updateItems([tokenId], (items) => {
                 for (let item of items) {

@@ -49,6 +49,32 @@
         #handoutLayer { display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; }
         #handoutImg { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
         .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-style: italic; text-align: center; padding: 20px; gap: 10px; }
+
+        /* 1. Base state: Empty tabs are subtle/faded */
+        .tab-btn {
+            opacity: 0.4;
+            filter: grayscale(100%);
+            border-bottom: 2px solid transparent;
+        }
+        
+        /* 2. Content state: Tab looks 'ready' */
+        .tab-btn.has-content {
+            opacity: 0.8;
+            filter: grayscale(0%);
+            color: #fff; /* Brighter text */
+        }
+        
+        /* 3. Active state: The tab the user is currently viewing */
+        .tab-btn.active-tab {
+            opacity: 1 !important; /* Force full visibility */
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom: 2px solid #2196F3;
+        }
+        
+        /* Optional: Add a subtle glow to tabs with content */
+        .tab-btn.has-content:not(.active-tab) {
+            text-shadow: 0 0 5px rgba(33, 150, 243, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -182,7 +208,16 @@
                     notesTab.style.display = "block";
                 }
             }
+
+            const urlTab = document.getElementById('tabUrl');
+            const notesTab = document.getElementById('tabNotes');
+            const handoutTab = document.getElementById('tabHandout');
         
+            // Toggle the 'has-content' class
+            urlTab.classList.toggle('has-content', !!currentMetadata.url);
+            handoutTab.classList.toggle('has-content', !!currentMetadata.handout);
+            notesTab.classList.toggle('has-content', !!currentMetadata.note && currentMetadata.note.trim() !== "");
+                
             // Guidance Logic
             if (currentTab === 'notes') {
                 showLayer('notesArea');

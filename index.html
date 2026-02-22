@@ -37,7 +37,6 @@
 
         button { cursor: pointer; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 10px; color: white; border: none; transition: background 0.2s; }
         #popoutBtn { width: 34px; height: 26px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
-        #shareHandoutBtn { flex-grow: 1; background: #4caf50; height: 26px; padding: 0 8px; display: none; }
 
         input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; outline: none; font-size: 11px; }
         input[type="text"]:focus { border-color: #2196F3; }
@@ -71,7 +70,6 @@
                         <svg class="eye-open" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                     </div>
                 </div>
-                <button id="shareHandoutBtn" title="Push image to all players">Share Handout</button>
                 <button id="popoutBtn" title="Open in new window">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </button>
@@ -99,41 +97,12 @@
         const notesArea = document.getElementById('notesArea');
         const handoutImg = document.getElementById('handoutImg');
         const statsFrame = document.getElementById('statsFrame');
-        const shareHandoutBtn = document.getElementById('shareHandoutBtn');
         const privateCheck = document.getElementById('privateCheck');
         const privateToggleContainer = document.getElementById('privateToggleContainer');
         const popoutBtn = document.getElementById('popoutBtn');
         
         let currentTab = 'url';
         let currentMetadata = { url: "", note: "", handout: "", private: true };
-
-        // --- 1. NEW: BROADCAST LISTENER ---
-        // This runs on EVERY player's machine.
-        OBR.broadcast.onMessage(`${ID}/reveal-handout`, (event) => {
-            const { url } = event.data;
-            
-            // Create a simple display page on the fly using a Data URL
-            const html = `
-                <html>
-                <body style="margin:0; background: #202124; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; overflow:hidden;">
-                    <img src="${url}" style="max-width:100%; max-height:calc(100vh - 40px); object-fit:contain; border-radius:8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                    <button onclick="window.parent.postMessage('close-popover', '*')" style="margin-top:10px; padding:5px 15px; background:#4caf50; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">CLOSE</button>
-                    <script>
-                        // Listen for click to close
-                        document.body.onclick = (e) => { if(e.target.tagName !== 'IMG') window.close(); };
-                    <\/script>
-                </body>
-                </html>
-            `;
-            const dataUrl = `data:text/html;base64,${btoa(html)}`;
-
-            OBR.popover.open({
-                id: `${ID}/handout-popover`,
-                url: dataUrl,
-                height: 600,
-                width: 600,
-            });
-        });
 
         const saveToToken = async () => {
             const tokenId = localStorage.getItem(STORAGE_KEY);
@@ -177,7 +146,6 @@
             const isHandout = tab === 'handout';
             if (isGM) {
                 input.style.display = isNotes ? "none" : "block";
-                shareHandoutBtn.style.display = isHandout ? "block" : "none";
                 popoutBtn.style.display = isNotes ? "none" : "flex"; 
             } else {
                 const isShared = isHandout || isNotes;
@@ -253,24 +221,6 @@
         popoutBtn.onclick = () => {
             const url = input.value.trim() || currentMetadata.url;
             if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
-        };
-
-        // --- 2. UPDATED SHARE BUTTON ---
-        shareHandoutBtn.onclick = async () => {
-            const url = input.value.trim() || currentMetadata.handout;
-            if (!url) {
-                OBR.notification.show("No URL to share!", "WARNING");
-                return;
-            }
-
-            // Save the URL to metadata first
-            currentMetadata.handout = url;
-            await saveToToken();
-
-            // Broadcast to all players to open the popover
-            await OBR.broadcast.sendMessage(`${ID}/reveal-handout`, { url: url });
-            
-            OBR.notification.show("Handout shared with everyone!");
         };
           
         OBR.player.onChange(p => syncFromToken(p.selection));

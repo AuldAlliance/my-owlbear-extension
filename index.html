@@ -196,24 +196,22 @@
         };
 
         const updateWindowSize = async () => {
-            const contentArea = document.getElementById('contentArea');
-            
             const hasContent = (currentTab === 'notes') || 
                                (currentTab === 'url' && currentMetadata.url) || 
                                (currentTab === 'handout' && currentMetadata.handout);
         
+            const contentArea = document.getElementById('contentArea');
+        
             if (hasContent) {
-                contentArea.classList.remove('hidden-content');
-                // Tell Owlbear to expand the window back to 500px (or your preferred size)
+                contentArea.style.display = "block";
+                // Expand to full height (matches your manifest)
                 await OBR.action.setHeight(500); 
             } else {
-                contentArea.classList.add('hidden-content');
-                // Tell Owlbear to shrink the window to just fit the header + tabs + controls
-                // 130px is usually enough for the buttons/input area
-                await OBR.action.setHeight(130); 
+                contentArea.style.display = "none";
+                // Shrink to fit only the tabs and input (roughly 140px)
+                await OBR.action.setHeight(140); 
             }
         };
-
         const showLayer = (id) => {
             ['statsFrame', 'notesArea', 'handoutLayer', 'noSelectionMsg'].forEach(l => {
                 document.getElementById(l).classList.toggle('active', l === id);

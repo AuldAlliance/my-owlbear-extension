@@ -78,7 +78,12 @@
     </style>
 </head>
 <body>
-    <div class="header"><div id="status">Ready</div></div>
+    <div class="header">
+        <div id="statusContainer" style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+            <img id="tokenThumb" src="" style="display: none; width: 18px; height: 18px; border-radius: 4px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2);">
+            <div id="status">Ready</div>
+        </div>
+    </div>
 
     <div class="tabs">
         <button id="tabUrl" class="tab-btn active-tab">LINK</button>
@@ -252,9 +257,12 @@
         const syncFromToken = async (selection) => {
             let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
             const status = document.getElementById('status');
+            const thumb = document.getElementById('tokenThumb');
+            
             if (!tokenId) {
                 status.innerText = "Awaiting Selection...";
                 status.style.color = "#888"; // Dim the text when nothing is selected
+                thumb.style.display = "none";
                 return showLayer('noSelectionMsg');
             }
             
@@ -262,12 +270,19 @@
             const token = items[0];
             
             if (token) {
-
                 // PRIORITY: Use the text field, then name, then fallback
-                const tokenName = token.text?.plainText || token.name || "Unnamed Token";
 
+                // 1. Handle the Thumbnail
+                if (token.image && token.image.url) {
+                    thumb.src = token.image.url;
+                    thumb.style.display = "block";
+                } else {
+                    thumb.style.display = "none";
+                }
+                
+                const tokenName = token.text?.plainText || token.name || "Unnamed Token";
                 // Update the header with the token name
-                status.innerHTML = `Editing: <span style="color: #2196F3;">${tokenName}</span>`;
+                status.innerHTML = `<span style="color: #aaa; font-size: 9px;">EDITING:</span> <span style="color: #2196F3;">${tokenName.toUpperCase()}</span>`;                
                 status.style.color = "#aaa";
                 
                 localStorage.setItem(STORAGE_KEY, tokenId);

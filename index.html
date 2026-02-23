@@ -13,8 +13,8 @@
             color: white; font-family: sans-serif; padding: 12px; margin: 0; 
             display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; overflow: hidden;
         }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
-        #status { font-size: 11px; color: #aaa; font-weight: bold; text-transform: uppercase; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 6px; margin-bottom: 10px; flex-shrink: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);}
+        #status { font-size: 10px; letter-spacing: 0.5px; white-space: nowrap;color: #aaa; font-weight: bold; text-transform: uppercase; overflow: hidden;text-overflow: ellipsis;max-width: 180px;}
         
         .tabs { display: flex; gap: 4px; margin-bottom: 8px; flex-shrink: 0; }
         .tab-btn { 
@@ -251,16 +251,25 @@
 
         const syncFromToken = async (selection) => {
             let tokenId = selection?.[0] || localStorage.getItem(STORAGE_KEY);
+            const status = document.getElementById('status');
             if (!tokenId) {
-                const msgElement = document.getElementById('noSelectionMsg');
-                msgElement.innerText = "Select a token to begin."; // Reset message
+                status.innerText = "Awaiting Selection...";
+                status.style.color = "#888"; // Dim the text when nothing is selected
                 return showLayer('noSelectionMsg');
             }
             
             const items = await OBR.scene.items.getItems([tokenId]);
             const token = items[0];
-            document.getElementById('status').innerText = token.text?.plainText || "Ready"; //added here
+            
             if (token) {
+
+                // PRIORITY: Use the text field, then name, then fallback
+                const tokenName = token.text?.plainText || token.name || "Unnamed Token";
+
+                // Update the header with the token name
+                status.innerHTML = `Editing: <span style="color: #2196F3;">${tokenName}</span>`;
+                status.style.color = "#aaa";
+                
                 localStorage.setItem(STORAGE_KEY, tokenId);
                 currentMetadata = {
                     url: token.metadata[`${ID}/url`] || "",

@@ -1,7 +1,9 @@
 {
-  "name": "Token Linker",
-  "version": "1.1.9",
+  "name": "Token Links",
+  "version": "1.0",
   "manifest_version": 1,
+  "description": "Manage and view external links, images and notes for your tokens and assets.",
+  "icon": "https://auldalliance.github.io/my-owlbear-extension/icon2.png",
   "action": {
     "title": "Token Links",
     "icon": "https://auldalliance.github.io/my-owlbear-extension/icon2.png",

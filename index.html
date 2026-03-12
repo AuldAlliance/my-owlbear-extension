@@ -146,10 +146,22 @@
                 for (let item of items) {
                     let val = input.value.trim();
                     if (currentTab === 'url') {
+                        // 1. Convert ngrok local domain to live 5e.tools domain
+                        if (val.includes("ngrok-free.dev")) {
+                            // This regex replaces everything from http up to the first slash after the domain
+                            val = val.replace(/^https?:\/\/[^/]+/, "https://5e.tools");
+                        }
+                    
+                        // 2. Perform your existing bestiary transformation
                         if (val.includes("bestiary.html#")) {
-                            val = decodeURIComponent(val).replace("bestiary.html#", "bestiary/").replace(/ /g, "-").replace(/_/g, "-") + ".html";
+                            val = decodeURIComponent(val)
+                                .replace("bestiary.html#", "bestiary/")
+                                .replace(/ /g, "-")
+                                .replace(/_/g, "-") + ".html";
+                            
                             input.value = val;
                         }
+                        
                         item.metadata[`${ID}/url`] = val;
                         currentMetadata.url = val;
                     } else if (currentTab === 'handout') {

@@ -40,7 +40,6 @@
         button { cursor: pointer; border-radius: 4px; font-weight: bold; text-transform: uppercase; font-size: 9px; color: white; border: none; transition: background 0.2; }
         #popoutBtn { width: 34px; height: 28px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 0;}
         
-        /* Marker Button Styles */
         .marker-tools { display: flex; gap: 4px; }
         #toggleMarkerBtn { background: #2196F3; padding: 6px 10px; flex: 2; }
         #clearMarkersBtn { background: #444; border: 1px solid rgba(255,255,255,0.1); padding: 6px 8px; flex: 1; }
@@ -99,7 +98,7 @@
     </div>
 
     <script type="module">
-    import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
+    import OBR, { buildShape } from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
     const ID = "com.auldalliance.stats-linker";
     const STORAGE_KEY = `${ID}_last_token_id`;
 
@@ -118,7 +117,7 @@
         let currentTab = 'url';
         let currentMetadata = { url: "", note: "", handout: "", private: true };
 
-        // --- MARKER LOGIC ---
+        // --- MARKER LOGIC UPDATED ---
         toggleMarkerBtn.onclick = async () => {
             const tokenId = localStorage.getItem(STORAGE_KEY);
             if (!tokenId) return;
@@ -127,15 +126,15 @@
             if (!token) return;
 
             const allItems = await OBR.scene.items.getItems();
-            // Look for a marker specifically attached to THIS token
             const existingMarker = allItems.find(i => 
-                i.attachedTo === tokenId && i.metadata?.[`${ID}/isMarker`]
+                i.attachedTo === tokenId && i.metadata && i.metadata[`${ID}/isMarker`]
             );
 
             if (existingMarker) {
                 await OBR.scene.items.deleteItems([existingMarker.id]);
             } else {
-                const marker = OBR.scene.items.buildShape()
+                // Using the named buildShape export directly
+                const marker = buildShape()
                     .width(token.width)
                     .height(token.height)
                     .shapeType("CIRCLE")
@@ -150,17 +149,17 @@
                     .disableHit(true)
                     .metadata({ [`${ID}/isMarker`]: true })
                     .build();
+                
                 await OBR.scene.items.addItems([marker]);
-            }
+            }      
         };
 
         clearMarkersBtn.onclick = async () => {
             const allItems = await OBR.scene.items.getItems();
-            const markers = allItems.filter(i => i.metadata?.[`${ID}/isMarker`]).map(i => i.id);
+            const markers = allItems.filter(i => i.metadata && i.metadata[`${ID}/isMarker`]).map(i => i.id);
             if (markers.length > 0) await OBR.scene.items.deleteItems(markers);
         };
 
-        // --- STATS LOGIC ---
         const saveToToken = async () => {
             const tokenId = localStorage.getItem(STORAGE_KEY);
             if (!tokenId || (!isGM && currentMetadata.private)) return;

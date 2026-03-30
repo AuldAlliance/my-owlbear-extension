@@ -104,11 +104,6 @@
                 <button id="popoutBtn" title="Open in new window">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </button>
-                <button id="addConditionBtn" title="Add Condition Circle" style="background: #4CAF50; width: 34px; height: 28px; display: flex; align-items: center; justify-content: center;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                    </svg>
-                </button>
             </div>
         </div>
     </div>
@@ -121,7 +116,7 @@
     </div>
 
     <script type="module">
-    import OBR, { buildShape } from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";        
+    import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
     const ID = "com.auldalliance.stats-linker";
     const STORAGE_KEY = `${ID}_last_token_id`;
 
@@ -136,41 +131,6 @@
         const privateCheck = document.getElementById('privateCheck');
         const privateToggleContainer = document.getElementById('privateToggleContainer');
         const popoutBtn = document.getElementById('popoutBtn');
-        const addConditionBtn = document.getElementById('addConditionBtn');
-
-        const addConditionCircle = async () => {
-            const selection = await OBR.player.getSelection();
-            if (!selection || selection.length === 0) return;
-        
-            const items = await OBR.scene.items.getItems(selection);
-            const targetToken = items[0];
-        
-            if (targetToken) {
-                // Calculate size: width/height * scale. 1.25 multiplier ensures it covers the token edges.
-                const size = Math.max(
-                    (targetToken.image?.width || 150) * targetToken.scale.x,
-                    (targetToken.image?.height || 150) * targetToken.scale.y
-                ) * 1.25;
-        
-                const circle = buildShape()
-                    .width(size)
-                    .height(size)
-                    .shapeType("CIRCLE")
-                    // STYLING OPTIONS FROM THE API:
-                    .fillColor("#ff4444")      // The hex color for the fill
-                    .fillOpacity(0.3)          // 0 to 1 (0.3 is a nice "aura" look)
-                    .strokeColor("#ff0000")    // The border color
-                    .strokeOpacity(1)          // Solid border
-                    .strokeWidth(4)            // Border thickness in pixels
-                    // POSITIONING:
-                    .position(targetToken.position)
-                    .attachedTo(targetToken.id) // IMPORTANT: It will move when the token moves
-                    .layer("ATTACHMENT")       // Keeps it pinned to the token layer
-                    .build();
-        
-                await OBR.scene.items.addItems([circle]);
-            }
-        };
         
         let currentTab = 'url';
         let currentMetadata = { url: "", note: "", handout: "", private: true };
@@ -363,8 +323,6 @@
             const url = input.value.trim() || currentMetadata.url;
             if (url) window.open(url.startsWith('http') ? url : `https://${url}`, "_blank", "width=600,height=700");
         };
-
-        addConditionBtn.onclick = addConditionCircle;
           
         OBR.player.onChange(p => syncFromToken(p.selection));
         OBR.scene.items.onChange(() => {

@@ -121,7 +121,7 @@
     </div>
 
     <script type="module">
-    import OBR, { buildShape } from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";        
+    import OBR, { buildShape, buildText } from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";        
     const ID = "com.auldalliance.stats-linker";
     const STORAGE_KEY = `${ID}_last_token_id`;
 
@@ -139,36 +139,69 @@
         const addConditionBtn = document.getElementById('addConditionBtn');
 
         const addConditionCircle = async () => {
-            const selection = await OBR.player.getSelection();
-            if (!selection || selection.length === 0) return;
+            // 1. Get the current token being edited
+            const tokenId = localStorage.getItem(STORAGE_KEY);
+            if (!tokenId) return;
         
-            const items = await OBR.scene.items.getItems(selection);
+            const items = await OBR.scene.items.getItems([tokenId]);
             const targetToken = items[0];
         
             if (targetToken) {
-                // Calculate size: width/height * scale. 1.25 multiplier ensures it covers the token edges.
-                const size = Math.max(
-                    (targetToken.image?.width || 150) * targetToken.scale.x,
-                    (targetToken.image?.height || 150) * targetToken.scale.y
-                ) * 1.25;
+                // --- Calculate Dimensions ---
+                // A standard token is usually 150x150 pixels at 1x scale.
+                // Let's create a base size for the quarter-circle.
+                // 'base_unit' is roughly half the width of a 1-grid square token.
+                const base_unit = 70;
+                
+                // Scale this base size to match the token's scale (e.g., if it's Huge/Large)
+                const size = base_unit * Math.max(targetToken.scale.x, targetToken.scale.y);
         
-                const circle = buildShape()
-                    .width(size)
-                    .height(size)
-                    .shapeType("CIRCLE")
-                    // STYLING OPTIONS FROM THE API:
-                    .fillColor("#ff4444")      // The hex color for the fill
-                    .fillOpacity(0.3)          // 0 to 1 (0.3 is a nice "aura" look)
-                    .strokeColor("#ff0000")    // The border color
-                    .strokeOpacity(1)          // Solid border
-                    .strokeWidth(4)            // Border thickness in pixels
-                    // POSITIONING:
-                    .position(targetToken.position)
-                    .attachedTo(targetToken.id) // IMPORTANT: It will move when the token moves
-                    .layer("ATTACHMENT")       // Keeps it pinned to the token layer
+                // --- Step 1: BUILD THE QUARTER-CIRCLE (ARC) ---
+                // Angles are in degrees: 0 is Right, 90 is Bottom, 180 is Left, 270 is Top.
+                // We want the bottom-right corner (from 0 to 90 degrees).
+                const cornerArc = buildShape()
+                    .width(size)  // Overall width
+                    .height(size) // Overall height (keeps it circular)
+                    .shapeType("ARC")
+                    .startAngle(0)  // Start at the 3 o'clock position
+                    .endAngle(90)   // End at the 6 o'clock position
+                    .fillColor("#0000FF") // Solid blue color
+                    .fillOpacity(1)
+                    .strokeColor("#FFFFFF") // White border
+                    .strokeWidth(2)
+                    .position(targetToken.position) // Centre of the token
+                    .attachedTo(targetToken.id)
+                    .layer("ATTACHMENT") // Keeps it above the token art
+                    .locked(false)
                     .build();
         
-                await OBR.scene.items.addItems([circle]);
+                // --- Step 2: BUILD THE "STUN" TEXT ---
+                // The position is at the centre of the token. We need to push the text
+                // into the bottom-right corner.
+                
+                // Calculate offset (push text roughly 1/3 of the size down and right)
+                const textOffset = size / 3.2;
+        
+                const stunText = buildText()
+                    .plainText("STUN")
+                    .fontSize(22 * Math.max(targetToken.scale.x, targetToken.scale.y)) // Scale font too
+                    .fontWeight(700) // Bold
+                    .fontFamily("sans-serif")
+                    .fillColor("#FFFFFF") // White text
+                    .textType("PLAIN")
+                    .textAlign("CENTER")
+                    // Apply the offset from the centre of the token
+                    .position({
+                        x: targetToken.position.x + textOffset,
+                        y: targetToken.position.y + textOffset
+                    })
+                    .attachedTo(targetToken.id)
+                    .layer("ATTACHMENT") // Renders over the arc
+                    .locked(false)
+                    .build();
+        
+                // 3. Add both items to the scene
+                await OBR.scene.items.addItems([cornerArc, stunText]);
             }
         };
         

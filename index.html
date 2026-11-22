@@ -135,6 +135,41 @@
         let currentTab = 'url';
         let currentMetadata = { url: "", note: "", handout: "", private: true };
 
+        // Convert a 5etools bestiary stat URL into its token-image URL.
+        // Example: #aurnozci_bmt -> /tokens/BMT/Aurnozci.webp
+        const get5eToolsTokenImageUrl = (statUrl) => {
+            try {
+                let sourceUrl = statUrl.trim();
+
+                // Match the same ngrok-to-5etools domain conversion used for stat links.
+                if (sourceUrl.includes("ngrok-free.dev")) {
+                    sourceUrl = sourceUrl.replace(/^https?:\\/\\/[^/]+/, "https://5e.tools");
+                }
+
+                const hash = new URL(sourceUrl).hash.slice(1);
+                if (!hash) return "";
+
+                const decodedHash = decodeURIComponent(hash);
+                const match = decodedHash.match(/^(.+)_([a-z0-9]+)$/i);
+                if (!match) return "";
+
+                const monsterId = match[1];
+                const source = match[2].toUpperCase();
+
+                // 5etools token filenames use the creature name, with spaces where
+                // the URL ID contains hyphens. Single-word IDs (e.g. aurnozci)
+                // are converted directly to Aurnozci.
+                const monsterName = monsterId
+                    .replace(/[-_]+/g, " ")
+                    .replace(/\b\w/g, character => character.toUpperCase());
+
+                return `https://5e.tools/img/bestiary/tokens/${source}/${encodeURIComponent(monsterName)}.webp`;
+            } catch (error) {
+                console.warn("Could not derive 5etools token image URL:", error);
+                return "";
+            }
+        };
+
         const saveToToken = async () => {
             const tokenId = localStorage.getItem(STORAGE_KEY);
 
@@ -146,6 +181,10 @@
                 for (let item of items) {
                     let val = input.value.trim();
                     if (currentTab === 'url') {
+                        // Keep the original bestiary URL so we can extract its monster ID/source.
+                        const originalStatUrl = val;
+                        const generatedImageUrl = get5eToolsTokenImageUrl(originalStatUrl);
+
                         // 1. Convert ngrok local domain to live 5e.tools domain
                         if (val.includes("ngrok-free.dev")) {
                             // This regex replaces everything from http up to the first slash after the domain
@@ -164,6 +203,12 @@
                         
                         item.metadata[`${ID}/url`] = val;
                         currentMetadata.url = val;
+
+                        // Automatically populate the VISUAL tab for 5etools bestiary links.
+                        if (generatedImageUrl) {
+                            item.metadata[`${ID}/handout`] = generatedImageUrl;
+                            currentMetadata.handout = generatedImageUrl;
+                        }
                     } else if (currentTab === 'handout') {
                         item.metadata[`${ID}/handout`] = val;
                         currentMetadata.handout = val;
